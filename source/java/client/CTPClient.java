@@ -14,11 +14,11 @@ import java.util.*;
 import javax.swing.*;
 import org.apache.log4j.*;
 import org.rsna.util.FileUtil;
+import org.rsna.util.StringUtil;
 
 public class CTPClient extends JFrame implements ActionListener {
 
-    static final String windowTitle = "CTP Client";
-    static final String panelTitle = "CTP Transmission Utility";
+    static final String title = "CTP Client";
 	static final Color bgColor = new Color(0xc6d8f9);
 
 	String destinationURL;
@@ -53,7 +53,14 @@ public class CTPClient extends JFrame implements ActionListener {
 
     public CTPClient(String[] args) {
 		super();
-		setTitle(windowTitle);
+
+		//Get the properties, including the default title and the args
+		configFile = FileUtil.getFile( new File("config.properties"), "/config.properties" );
+		config = getProperties(configFile, args);
+
+		destinationURL = config.getProperty("url");
+
+		setTitle(config.getProperty("windowTitle"));
 		JPanel panel = new JPanel(new BorderLayout());
 		getContentPane().add(panel, BorderLayout.CENTER);
 
@@ -65,11 +72,6 @@ public class CTPClient extends JFrame implements ActionListener {
 		//Get the anonymizer script and the lookup table
 		daScriptFile = FileUtil.getFile( new File("DA.script"), "/DA.script" );
 		daLUTFile = FileUtil.getFile( new File("LUT.properties"), "/LUT.properties" );
-
-		//Get the properties
-		configFile = FileUtil.getFile( new File("config.properties"), "/config.properties" );
-		config = getProperties(configFile);
-		destinationURL = config.getProperty("url");
 
 		//Make the UI components
 		destinationField = new InputText(destinationURL);
@@ -83,7 +85,7 @@ public class CTPClient extends JFrame implements ActionListener {
 		//Make the header panel
 		JPanel header = new JPanel();
 		header.setBackground(bgColor);
-		header.add(new TitleLabel(panelTitle));
+		header.add(new TitleLabel(config.getProperty("panelTitle")));
 		header.setBorder(BorderFactory.createEmptyBorder(10,5,10,5));
 		panel.add(header, BorderLayout.NORTH);
 
@@ -98,9 +100,11 @@ public class CTPClient extends JFrame implements ActionListener {
 		RowLayout layout = new RowLayout();
 		ui.setLayout(layout);
 
-		ui.add(new FieldLabel("Destination URL:"));
-		ui.add(destinationField);
-		ui.add(RowLayout.crlf());
+		if (!config.getProperty("showURL", "yes").equals("no")) {
+			ui.add(new FieldLabel("Destination URL:"));
+			ui.add(destinationField);
+			ui.add(RowLayout.crlf());
+		}
 
 		ui.add(browseButton);
 		ui.add(directoryPath);
@@ -172,7 +176,7 @@ public class CTPClient extends JFrame implements ActionListener {
 		SwingUtilities.invokeLater(enable);
 	}
 
-	private Properties getProperties(File file) {
+	private Properties getProperties(File file, String[] args) {
 		Properties props = new Properties();
 		FileInputStream stream = null;
 		try {
@@ -181,6 +185,23 @@ public class CTPClient extends JFrame implements ActionListener {
 		}
 		catch (Exception ignore) { }
 		FileUtil.close(stream);
+
+		//Put in the default title
+		props.setProperty("windowTitle", title);
+		props.setProperty("panelTitle", title);
+
+		//Add in the args
+		for (String arg : args) {
+			if (arg.length() >= 2) {
+				arg = StringUtil.removeEnclosingQuotes(arg);
+				int k = arg.indexOf("=");
+				if (k > 0) {
+					String name = arg.substring(0,k).trim();
+					String value = arg.substring(k+1).trim();
+					props.setProperty(name, value);
+				}
+			}
+		}
 		return props;
 	}
 
@@ -188,6 +209,7 @@ public class CTPClient extends JFrame implements ActionListener {
 		if (chooser == null) {
 			File here = new File(System.getProperty("user.dir"));
 			chooser = new JFileChooser(here);
+			chooser.setDialogTitle("Navigate to a directory containing images and click Open");
 			chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		}
 		if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {

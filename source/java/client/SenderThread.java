@@ -68,7 +68,7 @@ public class SenderThread extends Thread {
 						temp.delete();
 					}
 					else {
-						cp.println(Color.black, file.getName() + " ["+status.toString()+"]");
+						cp.println(Color.black, file.getName() + " ["+result.toString()+"]");
 					}
 				}
 				else {

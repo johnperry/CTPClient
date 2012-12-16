@@ -47,7 +47,7 @@
 			<fileset dir="${files}"/>
 		</copy>
 
-		<jar jarfile="${products}/TCIASender.jar">
+		<jar jarfile="${products}/CTPClient.jar">
 			<manifest>
 				<attribute name="Main-Class" value="client.CTPClient"/>
 				<attribute name="Implementation-Version" value="${today} @ ${now}"/>
