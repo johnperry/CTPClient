@@ -1,0 +1,82 @@
+<project name="CTPClient" default="all" basedir=".">
+
+	<property name="build" value="${basedir}/build"/>
+	<property name="libraries" value="${basedir}/libraries"/>
+	<property name="source" value="${basedir}/source"/>
+	<property name="files" value="${source}/files"/>
+	<property name="java" value="${source}/java"/>
+	<property name="products" value="${basedir}/products"/>
+
+	<property name="signed" value="${basedir}/signed"/>
+	<property name="keystore" value="${files}/keystore"/>
+	<property name="password" value="ctpstore"/>
+	<property name="alias" value="ctp"/>
+
+	<path id="classpath">
+		<pathelement location="${libraries}/util.jar"/>
+		<pathelement location="${libraries}/CTP.jar"/>
+		<pathelement location="${libraries}/dcm4che.jar"/>
+		<pathelement location="${libraries}/log4j.jar"/>
+	</path>
+
+	<target name="clean">
+		<delete dir="${build}" failonerror="false"/>
+	</target>
+
+	<target name="init">
+		<mkdir dir="${build}"/>
+		<tstamp>
+			<format property="today" pattern="dd-MMMM-yyyy"/>
+			<format property="now" pattern="HH:mm:ss"/>
+		</tstamp>
+		<echo message="Time now ${now}"/>
+		<echo message="ant.java.version = ${ant.java.version}" />
+		<mkdir dir="${build}"/>
+		<mkdir dir="${products}"/>
+	</target>
+
+	<target name="jar" depends="init">
+		<javac destdir="${build}" optimize="on"
+				classpathref="classpath"
+				includeantruntime="false"
+				debug="true" debuglevel="lines,vars,source">
+			<src path="${java}"/>
+		</javac>
+
+		<copy overwrite="true" todir="${build}">
+			<fileset dir="${files}"/>
+		</copy>
+
+		<jar jarfile="${products}/TCIASender.jar">
+			<manifest>
+				<attribute name="Main-Class" value="client.CTPClient"/>
+				<attribute name="Implementation-Version" value="${today} @ ${now}"/>
+				<attribute name="Class-Path" value="util.jar log4j.jar dcm4che.jar CTP.jar"/>
+			</manifest>
+			<fileset dir="${build}" includes="**"/>
+		</jar>
+	</target>
+
+	<target name="sign" depends="jar">
+		<copy overwrite="true" todir="${products}">
+			<fileset dir="${libraries}"/>
+		</copy>
+
+		<delete dir="${signed}" failonerror="false" />
+		<mkdir dir="${signed}" />
+		<signjar
+			destDir="${signed}"
+			alias="${alias}"
+			keystore="${keystore}"
+			storepass="${password}"
+			preservelastmodified="true">
+			<path>
+				<fileset dir="${products}" includes="*.jar" />
+			</path>
+			<flattenmapper />
+		</signjar>
+	</target>
+
+	<target name="all" depends="clean, sign"/>
+
+</project>
