@@ -10,13 +10,12 @@ package client;
 import java.awt.*;
 import java.io.*;
 import java.net.*;
+import java.util.*;
 import org.rsna.server.*;
 import org.rsna.util.*;
 import org.rsna.ctp.objects.*;
-import org.rsna.ctp.stdstages.anonymizer.dicom.DAScript;
 import org.rsna.ctp.stdstages.anonymizer.dicom.DICOMAnonymizer;
 import org.rsna.ctp.stdstages.anonymizer.AnonymizerStatus;
-import org.rsna.ctp.stdstages.anonymizer.LookupTable;
 
 public class SenderThread extends Thread {
 
@@ -24,19 +23,17 @@ public class SenderThread extends Thread {
 	String urlString;
 	ColorPane cp;
 	CTPClient parent;
-	File daScriptFile;
-	File daLUTFile;
-	DAScript daScript;
+	Properties daScriptProps;
+	Properties daLUTProps;
 
-    public SenderThread (File dir, String urlString, ColorPane cp, File daScriptFile, File daLUTFile, CTPClient parent) {
+    public SenderThread (File dir, String urlString, ColorPane cp, Properties daScriptProps, Properties daLUTProps, CTPClient parent) {
 		super("SenderThread");
 		this.dir = dir;
 		this.urlString = urlString;
 		this.cp = cp;
-		this.daScriptFile = daScriptFile;
-		this.daLUTFile = daLUTFile;
+		this.daScriptProps = daScriptProps;
+		this.daLUTProps = daLUTProps;
 		this.parent = parent;
-		this.daScript = DAScript.getInstance(daScriptFile);
 	}
 
 	public void run() {
@@ -57,8 +54,8 @@ public class SenderThread extends Thread {
 					AnonymizerStatus result =
 						DICOMAnonymizer.anonymize(file, //input file
 												  temp, //output file
-												  daScript.toProperties(),
-												  LookupTable.getProperties(daLUTFile),
+												  daScriptProps,
+												  daLUTProps,
 												  null, //no IntegerTable in this application
 												  false, //keep transfer syntax
 												  false); //do not rename to SOPInstanceUID

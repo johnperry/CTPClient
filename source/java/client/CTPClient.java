@@ -10,9 +10,14 @@ package client;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.net.HttpURLConnection;
 import java.util.*;
 import javax.swing.*;
 import org.apache.log4j.*;
+import org.rsna.ctp.stdstages.anonymizer.dicom.DAScript;
+import org.rsna.ctp.stdstages.anonymizer.LookupTable;
+import org.rsna.server.HttpResponse;
+import org.rsna.util.HttpUtil;
 import org.rsna.util.FileUtil;
 import org.rsna.util.StringUtil;
 
@@ -23,7 +28,8 @@ public class CTPClient extends JFrame implements ActionListener {
 
 	String destinationURL;
 
-    ColorPane cp;
+    DirectoryPanel dp;
+    //ColorPane cp;
     StatusPane status;
     volatile boolean sending = false;
 
@@ -35,10 +41,9 @@ public class CTPClient extends JFrame implements ActionListener {
     JFileChooser chooser = null;
     File dir = null;
 
-    File daScriptFile;
-    File daLUTFile;
-    File configFile;
-
+    DAScript daScript;
+    Properties daScriptProps;
+    Properties daLUTProps;
     Properties config;
 
     String browsePrompt = "Select a directory containing data to transmit.";
@@ -55,8 +60,7 @@ public class CTPClient extends JFrame implements ActionListener {
 		super();
 
 		//Get the properties, including the default title and the args
-		configFile = FileUtil.getFile( new File("config.properties"), "/config.properties" );
-		config = getProperties(configFile, args);
+		config = getProperties(args);
 
 		destinationURL = config.getProperty("url");
 
@@ -69,9 +73,11 @@ public class CTPClient extends JFrame implements ActionListener {
 		System.setProperty("javax.net.ssl.keyStore", "keystore");
 		System.setProperty("javax.net.ssl.keyStorePassword", "ctpstore");
 
-		//Get the anonymizer script and the lookup table
-		daScriptFile = FileUtil.getFile( new File("DA.script"), "/DA.script" );
-		daLUTFile = FileUtil.getFile( new File("LUT.properties"), "/LUT.properties" );
+		//Get the anonymizer script and set the overridden params
+		daScriptProps = getDAScriptProps();
+
+		//Get the LookupTable
+		daLUTProps = getDALUTProps();
 
 		//Make the UI components
 		destinationField = new InputText(destinationURL);
@@ -118,10 +124,12 @@ public class CTPClient extends JFrame implements ActionListener {
 		//Put the flow panel in the north panel of the main panel
 		main.add(flow, BorderLayout.NORTH);
 
-		//Put a ColorPane in a scroll pane and put that in the center of the main panel
-		cp = new ColorPane();
+		//Put a DirectoryPanel in a scroll pane and put that in the center of the main panel
+		dp = new DirectoryPanel();
 		JScrollPane sp = new JScrollPane();
-		sp.setViewportView(cp);
+		sp.setViewportView(dp);
+		sp.getVerticalScrollBar().setBlockIncrement(100);
+		sp.getVerticalScrollBar().setUnitIncrement(20);
 		main.add(sp, BorderLayout.CENTER);
 
 		//Put the start button in the south panel of the main panel
@@ -151,6 +159,7 @@ public class CTPClient extends JFrame implements ActionListener {
 			dir = getDirectory();
 			if (dir != null) {
 				directoryPath.setText(dir.getAbsolutePath());
+				dp.clear();
 				listFiles(dir);
 				startButton.setEnabled(true);
 			}
@@ -159,9 +168,8 @@ public class CTPClient extends JFrame implements ActionListener {
 		else if (event.getSource().equals(startButton)) {
 			startButton.setEnabled(false);
 			browseButton.setEnabled(false);
-			cp.clear();
 			sending = true;
-			(new SenderThread(dir, destinationField.getText(), cp, daScriptFile, daLUTFile, this)).start();
+			//(new SenderThread(dir, destinationField.getText(), dp, daScriptProps, daLUTProps, this)).start();
 		}
 	}
 
@@ -176,33 +184,117 @@ public class CTPClient extends JFrame implements ActionListener {
 		SwingUtilities.invokeLater(enable);
 	}
 
-	private Properties getProperties(File file, String[] args) {
+	private Properties getProperties(String[] args) {
 		Properties props = new Properties();
-		FileInputStream stream = null;
 		try {
-			stream = new FileInputStream(file);
-			props.load(stream);
-		}
-		catch (Exception ignore) { }
-		FileUtil.close(stream);
+			File configFile = File.createTempFile("CONFIG-", ".properties");
+			configFile.delete();
+			FileUtil.getFile( configFile, "/config.properties" );
 
-		//Put in the default title
-		props.setProperty("windowTitle", title);
-		props.setProperty("panelTitle", title);
+			FileInputStream stream = null;
+			try {
+				stream = new FileInputStream(configFile);
+				props.load(stream);
+			}
+			catch (Exception ignore) { }
+			FileUtil.close(stream);
 
-		//Add in the args
-		for (String arg : args) {
-			if (arg.length() >= 2) {
-				arg = StringUtil.removeEnclosingQuotes(arg);
-				int k = arg.indexOf("=");
-				if (k > 0) {
-					String name = arg.substring(0,k).trim();
-					String value = arg.substring(k+1).trim();
-					props.setProperty(name, value);
+			//Put in the default title
+			props.setProperty("windowTitle", title);
+			props.setProperty("panelTitle", title);
+
+			//Add in the args
+			for (String arg : args) {
+				if (arg.length() >= 2) {
+					arg = StringUtil.removeEnclosingQuotes(arg);
+					int k = arg.indexOf("=");
+					if (k > 0) {
+						String name = arg.substring(0,k).trim();
+						String value = arg.substring(k+1).trim();
+						props.setProperty(name, value);
+					}
 				}
 			}
 		}
+		catch (Exception noProps) { }
 		return props;
+	}
+
+	private Properties getDAScriptProps() {
+		Properties daScriptProps = new Properties();
+		try {
+			File daScriptFile = File.createTempFile("DA-", ".script");
+			daScriptFile.delete();
+			String daScriptName = config.getProperty("daScriptName");
+			if (!getTextFileFromServer(daScriptFile, daScriptName)) {
+				FileUtil.getFile( daScriptFile, "/DA.script" );
+			}
+			daScript = DAScript.getInstance(daScriptFile);
+			daScriptProps = daScript.toProperties();
+			for (String configProp : config.stringPropertyNames()) {
+				if (configProp.startsWith("@")) {
+					String value = config.getProperty(configProp);
+					String key = "param." + configProp.substring(1);
+					daScriptProps.setProperty(key, value);
+				}
+			}
+		}
+		catch (Exception unable) { }
+		return daScriptProps;
+	}
+
+	private Properties getDALUTProps() {
+		Properties daLUTProps = new Properties();
+		try {
+			File daLUTFile = File.createTempFile("DA-", ".lut");
+			daLUTFile.delete();
+			String daLUTName = config.getProperty("daLUTName");
+			if (!getTextFileFromServer(daLUTFile, daLUTName)) {
+				FileUtil.getFile( daLUTFile, "/LUT.properties" );
+			}
+			daLUTProps = LookupTable.getProperties(daLUTFile);
+			for (String configProp : config.stringPropertyNames()) {
+				if (configProp.startsWith("$")) {
+					String value = config.getProperty(configProp);
+					String key = configProp.substring(1);
+					daLUTProps.setProperty(key, value);
+				}
+			}
+		}
+		catch (Exception unable) { }
+		return daLUTProps;
+	}
+
+	private boolean getTextFileFromServer(File file, String nameOnServer) {
+		String protocol = config.getProperty("protocol");
+		String host = config.getProperty("host");
+		String application = config.getProperty("application");
+		if ((protocol != null) && (host != null) && (application != null) && (nameOnServer != null)) {
+			String url = protocol + "://" + host + "/" + application + "/" + nameOnServer;
+			try {
+				//Connect to the server
+				HttpURLConnection conn = HttpUtil.getConnection(url);
+				conn.setRequestMethod("GET");
+				conn.setDoOutput(false);
+				conn.connect();
+
+				//Get the response
+				if (conn.getResponseCode() == HttpResponse.ok) {
+					BufferedReader reader =
+						new BufferedReader(
+							new InputStreamReader( conn.getInputStream(), FileUtil.utf8 ) );
+					StringWriter buffer = new StringWriter();
+					char[] cbuf = new char[1024];
+					int n;
+					while ( (n = reader.read(cbuf,0,1024)) != -1 ) buffer.write(cbuf,0,n);
+					reader.close();
+					FileUtil.setText(file, buffer.toString());
+					return true;
+				}
+			}
+			catch (Exception unable) { }
+		}
+		return false;
 	}
 
 	private File getDirectory() {
@@ -220,12 +312,31 @@ public class CTPClient extends JFrame implements ActionListener {
 	}
 
 	private void listFiles(File dir) {
-		cp.clear();
+		dp.add(new DirectoryCheckBox());
+		dp.add(new DirectoryName(dir), RowLayout.span(4));
+		dp.add(RowLayout.crlf());
 		File[] files = dir.listFiles(new FilesOnlyFilter());
 		for (File file : files) {
-			cp.println(Color.black, file.getName() + " [" + file.length() + "]");
+			FileCheckBox cb = (FileCheckBox)dp.add(new FileCheckBox());
+			String name = file.getName().toLowerCase();
+			boolean dcm = name.endsWith(".dcm");
+			dcm |= name.startsWith("img");
+			dcm |= name.startsWith("image");
+			dcm |= name.matches("[0-9\\.]+");
+			dcm &= !name.endsWith(".jpg");
+			dcm &= !name.endsWith(".jpeg");
+			dcm &= !name.endsWith(".png");
+			cb.setSelected(dcm);
+
+			dp.add(new FileName(file));
+			dp.add(new FileSize(file));
+			dp.add(new StatusText());
+			dp.add(RowLayout.crlf());
 		}
-		StatusPane.getInstance().setText( files.length + " files selected" );
+		dp.add(Box.createVerticalStrut(10));
+		dp.add(RowLayout.crlf());
+		files = dir.listFiles(new DirectoriesOnlyFilter());
+		for (File file : files) listFiles(file);
 	}
 
     class WindowCloser extends WindowAdapter {
@@ -296,6 +407,94 @@ public class CTPClient extends JFrame implements ActionListener {
 			setFont( new Font( "SansSerif", Font.BOLD, 12 ) );
 			setForeground( Color.BLUE );
 			setAlignmentX(0.5f);
+		}
+	}
+
+	class DirectoryCheckBox extends JCheckBox implements ActionListener {
+		public DirectoryCheckBox() {
+			super();
+			setSelected(true);
+			addActionListener(this);
+		}
+		public void actionPerformed(ActionEvent event) {
+			DirectoryCheckBox source = (DirectoryCheckBox)event.getSource();
+			boolean selected = source.isSelected();
+			Component[] components = dp.getComponents();
+			for (int k=0; k<components.length; k++) {
+				if (components[k].equals(source)) {
+					for (int i=k+1; i<components.length; i++) {
+						Component c = components[i];
+						if (c instanceof DirectoryCheckBox) return;
+						if (c instanceof FileCheckBox) {
+							((FileCheckBox)c).setSelected(selected);
+						}
+					}
+					return;
+				}
+			}
+			return;
+		}
+	}
+
+	class DirectoryName extends JLabel {
+		File dir;
+		public DirectoryName(File dir) {
+			super(dir.getAbsolutePath());
+			this.dir = dir;
+			setFont( new Font( "Monospaced", Font.BOLD, 18 ) );
+			setForeground( Color.BLACK );
+		}
+		public File getDirectory() {
+			return dir;
+		}
+	}
+
+	class FileCheckBox extends JCheckBox {
+		public FileCheckBox() {
+			super();
+			setBorder(BorderFactory.createEmptyBorder(0,20,0,0));
+			setSelected(true);
+		}
+	}
+
+	class FileName extends JLabel {
+		File file;
+		public FileName(File file) {
+			super(file.getName());
+			this.file = file;
+			setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
+			setForeground( Color.BLACK );
+		}
+		public File getFile() {
+			return file;
+		}
+	}
+
+	class FileSize extends JLabel {
+		public FileSize(File file) {
+			super();
+			setText( String.format("%,d", file.length()) );
+			setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
+			setAlignmentX(1.0f);
+		}
+	}
+
+	class StatusText extends JLabel {
+		public StatusText() {
+			super();
+			setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
+			setForeground( Color.BLACK );
+		}
+	}
+
+	class DirectoryPanel extends JPanel {
+		public DirectoryPanel() {
+			super();
+			setLayout(new RowLayout());
+			setBackground(Color.WHITE);
+		}
+		public void clear() {
+			removeAll();
 		}
 	}
 
