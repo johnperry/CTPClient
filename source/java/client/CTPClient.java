@@ -26,16 +26,14 @@ public class CTPClient extends JFrame implements ActionListener {
     static final String title = "CTP Client";
 	static final Color bgColor = new Color(0xc6d8f9);
 
-	String destinationURL;
-
+    JScrollPane sp;
     DirectoryPanel dp;
-    //ColorPane cp;
     StatusPane status;
     volatile boolean sending = false;
 
     InputText destinationField;
-    FieldValue directoryPath;
     FieldButton browseButton;
+    FieldButton helpButton;
     FieldButton startButton;
 
     JFileChooser chooser = null;
@@ -46,7 +44,11 @@ public class CTPClient extends JFrame implements ActionListener {
     Properties daLUTProps;
     Properties config;
 
+    Log log = new Log();
+    IDTable idTable = new IDTable();
+
     String browsePrompt = "Select a directory containing data to transmit.";
+    String helpURL;
 
     public static void main(String[] args) {
 		Logger.getRootLogger().addAppender(
@@ -62,31 +64,32 @@ public class CTPClient extends JFrame implements ActionListener {
 		//Get the properties, including the default title and the args
 		config = getProperties(args);
 
-		destinationURL = config.getProperty("url");
-
 		setTitle(config.getProperty("windowTitle"));
 		JPanel panel = new JPanel(new BorderLayout());
 		getContentPane().add(panel, BorderLayout.CENTER);
 
 		//Set the SSL params
-		FileUtil.getFile( new File("keystore"), "/keystore" );
-		System.setProperty("javax.net.ssl.keyStore", "keystore");
-		System.setProperty("javax.net.ssl.keyStorePassword", "ctpstore");
+		getKeystore();
 
 		//Get the anonymizer script and set the overridden params
 		daScriptProps = getDAScriptProps();
 
-		//Get the LookupTable
+		//Get the LookupTable and set the overridden params
 		daLUTProps = getDALUTProps();
 
 		//Make the UI components
+		String destinationURL = config.getProperty("url");
+		destinationURL = (destinationURL != null) ? destinationURL.trim() : "";
 		destinationField = new InputText(destinationURL);
-		browseButton = new FieldButton("Browse");
+		browseButton = new FieldButton("Select Image Directory");
+		browseButton.setEnabled(true);
 		browseButton.addActionListener(this);
+		helpButton = new FieldButton("Help");
+		helpButton.setEnabled(true);
+		helpButton.addActionListener(this);
 		startButton = new FieldButton("Start");
 		startButton.setEnabled(false);
 		startButton.addActionListener(this);
-		directoryPath = new FieldValue(browsePrompt);
 
 		//Make the header panel
 		JPanel header = new JPanel();
@@ -98,35 +101,41 @@ public class CTPClient extends JFrame implements ActionListener {
 		//Make a panel for the input fields and the progress display
 		JPanel main = new JPanel();
 		main.setLayout(new BorderLayout());
+		main.setBackground(bgColor);
 
-		//Put the input fields in a RowLayout panel
-		JPanel ui = new JPanel();
-		ui.setBorder(BorderFactory.createEmptyBorder(0,0,10,0));
-		ui.setBackground(bgColor);
-		RowLayout layout = new RowLayout();
-		ui.setLayout(layout);
+		//Put the input fields in a vertical Box
+		Box vBox = Box.createVerticalBox();
+		vBox.setBorder(BorderFactory.createEmptyBorder(0,0,10,0));
+		vBox.setBackground(bgColor);
 
 		if (!config.getProperty("showURL", "yes").equals("no")) {
-			ui.add(new FieldLabel("Destination URL:"));
-			ui.add(destinationField);
-			ui.add(RowLayout.crlf());
+			Box destBox = Box.createHorizontalBox();
+			destBox.setBackground(bgColor);
+			destBox.add(new FieldLabel("Destination URL:"));
+			destBox.add(Box.createHorizontalStrut(5));
+			destBox.add(destinationField);
+			vBox.add(destBox);
+			vBox.add(Box.createVerticalStrut(10));
 		}
 
-		ui.add(browseButton);
-		ui.add(directoryPath);
-		ui.add(RowLayout.crlf());
+		Box buttonBox = Box.createHorizontalBox();
+		buttonBox.setBackground(bgColor);
+		buttonBox.add(browseButton);
 
-		//Now we need a FlowLayout panel to center the ui panel
-		JPanel flow = new JPanel();
-		flow.add(ui);
-		flow.setBackground(bgColor);
+		helpURL = config.getProperty("helpURL");
+		helpURL = (helpURL != null) ? helpURL.trim() : "";
+		if (!helpURL.equals("")) {
+			buttonBox.add(Box.createHorizontalStrut(20));
+			buttonBox.add(helpButton);
+		}
+		vBox.add(buttonBox);
 
-		//Put the flow panel in the north panel of the main panel
-		main.add(flow, BorderLayout.NORTH);
+		//Put the vBox in the north panel of the main panel
+		main.add(vBox, BorderLayout.NORTH);
 
 		//Put a DirectoryPanel in a scroll pane and put that in the center of the main panel
 		dp = new DirectoryPanel();
-		JScrollPane sp = new JScrollPane();
+		sp = new JScrollPane();
 		sp.setViewportView(dp);
 		sp.getVerticalScrollBar().setBlockIncrement(100);
 		sp.getVerticalScrollBar().setUnitIncrement(20);
@@ -155,21 +164,31 @@ public class CTPClient extends JFrame implements ActionListener {
 	}
 
 	public void actionPerformed(ActionEvent event) {
-		if (event.getSource().equals(browseButton)) {
+		Object source = event.getSource();
+		if (source.equals(browseButton)) {
 			dir = getDirectory();
 			if (dir != null) {
-				directoryPath.setText(dir.getAbsolutePath());
 				dp.clear();
 				listFiles(dir);
 				startButton.setEnabled(true);
+				invalidate();
+				validate();
+				sp.getVerticalScrollBar().setValue(0);
 			}
 			else startButton.setEnabled(false);
 		}
-		else if (event.getSource().equals(startButton)) {
+		else if (source.equals(startButton)) {
 			startButton.setEnabled(false);
 			browseButton.setEnabled(false);
 			sending = true;
-			//(new SenderThread(dir, destinationField.getText(), dp, daScriptProps, daLUTProps, this)).start();
+			SenderThread sender = new SenderThread(this);
+			sender.start();
+		}
+		else if (source.equals(helpButton)) {
+			String helpURL = config.getProperty("helpURL");
+			if (!helpURL.equals("")) {
+				BrowserUtil.openURL(helpURL);
+			}
 		}
 	}
 
@@ -178,10 +197,33 @@ public class CTPClient extends JFrame implements ActionListener {
 		Runnable enable = new Runnable() {
 			public void run() {
 				browseButton.setEnabled(true);
-				directoryPath.setText(browsePrompt);
 			}
 		};
 		SwingUtilities.invokeLater(enable);
+	}
+
+	public String getDestinationURL() {
+		return destinationField.getText();
+	}
+
+	public DirectoryPanel getDirectoryPanel() {
+		return dp;
+	}
+
+	public Properties getScriptProps() {
+		return daScriptProps;
+	}
+
+	public Properties getLUTProps() {
+		return daLUTProps;
+	}
+
+	public Log getLog() {
+		return log;
+	}
+
+	public IDTable getIDTable() {
+		return idTable;
 	}
 
 	private Properties getProperties(String[] args) {
@@ -216,7 +258,9 @@ public class CTPClient extends JFrame implements ActionListener {
 				}
 			}
 		}
-		catch (Exception noProps) { }
+		catch (Exception noProps) {
+			log.append("Unable to load the config properties\n");
+		}
 		return props;
 	}
 
@@ -239,7 +283,9 @@ public class CTPClient extends JFrame implements ActionListener {
 				}
 			}
 		}
-		catch (Exception unable) { }
+		catch (Exception unable) {
+			log.append("Unable to obtain the anonymizer script\n");
+		}
 		return daScriptProps;
 	}
 
@@ -261,8 +307,23 @@ public class CTPClient extends JFrame implements ActionListener {
 				}
 			}
 		}
-		catch (Exception unable) { }
+		catch (Exception unable) {
+			log.append("Unable to obtain the anonymizer LUT\n");
+		}
 		return daLUTProps;
+	}
+
+	private void getKeystore() {
+		try {
+			File keystore = File.createTempFile("DA-", ".lut");
+			keystore.delete();
+			FileUtil.getFile( keystore, "/keystore" );
+			System.setProperty("javax.net.ssl.keyStore", keystore.getAbsolutePath());
+			System.setProperty("javax.net.ssl.keyStorePassword", "ctpstore");
+		}
+		catch (Exception ex) {
+			log.append("Unable to install the keystore\n");
+		}
 	}
 
 	private boolean getTextFileFromServer(File file, String nameOnServer) {
@@ -312,12 +373,11 @@ public class CTPClient extends JFrame implements ActionListener {
 	}
 
 	private void listFiles(File dir) {
-		dp.add(new DirectoryCheckBox());
+		dp.add(new DirectoryCheckBox(dp));
 		dp.add(new DirectoryName(dir), RowLayout.span(4));
 		dp.add(RowLayout.crlf());
 		File[] files = dir.listFiles(new FilesOnlyFilter());
 		for (File file : files) {
-			FileCheckBox cb = (FileCheckBox)dp.add(new FileCheckBox());
 			String name = file.getName().toLowerCase();
 			boolean dcm = name.endsWith(".dcm");
 			dcm |= name.startsWith("img");
@@ -326,11 +386,18 @@ public class CTPClient extends JFrame implements ActionListener {
 			dcm &= !name.endsWith(".jpg");
 			dcm &= !name.endsWith(".jpeg");
 			dcm &= !name.endsWith(".png");
+
+			FileName fileName = new FileName(file);
+			FileSize fileSize = new FileSize(file);
+			StatusText statusText = new StatusText();
+			FileCheckBox cb = new FileCheckBox(fileName, statusText);
 			cb.setSelected(dcm);
 
-			dp.add(new FileName(file));
-			dp.add(new FileSize(file));
-			dp.add(new StatusText());
+			dp.add(cb);
+			dp.add(fileName);
+			dp.add(Box.createHorizontalStrut(20));
+			dp.add(fileSize);
+			dp.add(statusText);
 			dp.add(RowLayout.crlf());
 		}
 		dp.add(Box.createVerticalStrut(10));
@@ -346,15 +413,25 @@ public class CTPClient extends JFrame implements ActionListener {
 			parent.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 		}
 		public void windowClosing(WindowEvent evt) {
+
+			//Make sure we aren't busy
 			if (sending) {
 				int response = JOptionPane.showConfirmDialog(
 								parent,
 								"Files are still being transmitted.\nAre you sure you want to stop the program?",
 								"Are you sure?",
 								JOptionPane.YES_NO_OPTION);
-				if (response == JOptionPane.YES_OPTION) System.exit(0);
+				if (response != JOptionPane.YES_OPTION) return;
 			}
-			else System.exit(0);
+
+			//Offer to save the idTable if it isn't empty
+			idTable.save(parent);
+
+			//Offer to save the log if it isn't empty
+			log.save(parent);
+
+			//Done
+			System.exit(0);
 		}
     }
 
@@ -382,6 +459,7 @@ public class CTPClient extends JFrame implements ActionListener {
 			Dimension size = getPreferredSize();
 			size.width = 400;
 			setPreferredSize(size);
+			setMaximumSize(size);
 		}
 	}
 
@@ -407,94 +485,6 @@ public class CTPClient extends JFrame implements ActionListener {
 			setFont( new Font( "SansSerif", Font.BOLD, 12 ) );
 			setForeground( Color.BLUE );
 			setAlignmentX(0.5f);
-		}
-	}
-
-	class DirectoryCheckBox extends JCheckBox implements ActionListener {
-		public DirectoryCheckBox() {
-			super();
-			setSelected(true);
-			addActionListener(this);
-		}
-		public void actionPerformed(ActionEvent event) {
-			DirectoryCheckBox source = (DirectoryCheckBox)event.getSource();
-			boolean selected = source.isSelected();
-			Component[] components = dp.getComponents();
-			for (int k=0; k<components.length; k++) {
-				if (components[k].equals(source)) {
-					for (int i=k+1; i<components.length; i++) {
-						Component c = components[i];
-						if (c instanceof DirectoryCheckBox) return;
-						if (c instanceof FileCheckBox) {
-							((FileCheckBox)c).setSelected(selected);
-						}
-					}
-					return;
-				}
-			}
-			return;
-		}
-	}
-
-	class DirectoryName extends JLabel {
-		File dir;
-		public DirectoryName(File dir) {
-			super(dir.getAbsolutePath());
-			this.dir = dir;
-			setFont( new Font( "Monospaced", Font.BOLD, 18 ) );
-			setForeground( Color.BLACK );
-		}
-		public File getDirectory() {
-			return dir;
-		}
-	}
-
-	class FileCheckBox extends JCheckBox {
-		public FileCheckBox() {
-			super();
-			setBorder(BorderFactory.createEmptyBorder(0,20,0,0));
-			setSelected(true);
-		}
-	}
-
-	class FileName extends JLabel {
-		File file;
-		public FileName(File file) {
-			super(file.getName());
-			this.file = file;
-			setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
-			setForeground( Color.BLACK );
-		}
-		public File getFile() {
-			return file;
-		}
-	}
-
-	class FileSize extends JLabel {
-		public FileSize(File file) {
-			super();
-			setText( String.format("%,d", file.length()) );
-			setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
-			setAlignmentX(1.0f);
-		}
-	}
-
-	class StatusText extends JLabel {
-		public StatusText() {
-			super();
-			setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
-			setForeground( Color.BLACK );
-		}
-	}
-
-	class DirectoryPanel extends JPanel {
-		public DirectoryPanel() {
-			super();
-			setLayout(new RowLayout());
-			setBackground(Color.WHITE);
-		}
-		public void clear() {
-			removeAll();
 		}
 	}
 

@@ -118,15 +118,10 @@ public class RowLayout implements LayoutManager2 {
 		return rows;
 	}
 
-	static int layoutCount = 0;
-
 	private Dimension getLayoutSize(Container parent, int hGap, int vGap, boolean layout) {
 		Dimension d;
 		Component[] components = parent.getComponents();
 		Insets insets = parent.getInsets();
-
-		layoutCount++;
-		System.out.println(layoutCount+": Starting layout");
 
 		//First find the number of rows and columns.
 		int maxRowLength = 0;
@@ -190,9 +185,6 @@ public class RowLayout implements LayoutManager2 {
 			}
 		}
 
-		System.out.println("Starting column width adjustments for spans");
-		long startTime = System.currentTimeMillis();
-
 		//Now adjust the column widths for the multi-column spans.
 		//The algorithm requires that we work in columns, starting at
 		//the left. Within a column, we adjust the column width for
@@ -225,8 +217,6 @@ public class RowLayout implements LayoutManager2 {
 				}
 			}
 		}
-
-		System.out.println("time = "+(System.currentTimeMillis()-startTime));
 
 		//Now lay out the container
 		int currentX = insets.left;
@@ -262,9 +252,6 @@ public class RowLayout implements LayoutManager2 {
 				x += w;
 			}
 		}
-
-		System.out.println("Finished layout\n");
-
 		return new Dimension(maxX - hGap, currentY + insets.bottom - vGap);
 	}
 

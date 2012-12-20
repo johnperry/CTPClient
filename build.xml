@@ -4,8 +4,11 @@
 	<property name="libraries" value="${basedir}/libraries"/>
 	<property name="source" value="${basedir}/source"/>
 	<property name="files" value="${source}/files"/>
+	<property name="xsl" value="${source}/xsl"/>
 	<property name="java" value="${source}/java"/>
 	<property name="products" value="${basedir}/products"/>
+
+	<property name="zip" value="${basedir}/zip"/>
 
 	<property name="signed" value="${basedir}/signed"/>
 	<property name="keystore" value="${files}/keystore"/>
@@ -32,6 +35,7 @@
 		<echo message="Time now ${now}"/>
 		<echo message="ant.java.version = ${ant.java.version}" />
 		<mkdir dir="${build}"/>
+		<delete dir="${products}" failonerror="false" />
 		<mkdir dir="${products}"/>
 	</target>
 
@@ -77,6 +81,18 @@
 		</signjar>
 	</target>
 
-	<target name="all" depends="clean, sign"/>
+	<target name="zip" depends="sign">
+		<delete dir="${zip}" failonerror="false" />
+		<copy overwrite="true" todir="${zip}">
+			<fileset dir="${signed}"/>
+		</copy>
+		<copy overwrite="true" todir="${zip}">
+			<fileset dir="${xsl}"/>
+		</copy>
+		<zip destfile="${products}/CTPClient.zip" basedir="${zip}"/>
+		<delete dir="${zip}" failonerror="false" />
+	</target>
+
+	<target name="all" depends="clean, zip"/>
 
 </project>

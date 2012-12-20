@@ -38,13 +38,17 @@ public class StatusPane extends JPanel {
 	}
 
 	public void setText(String s) {
-		final String ss = s;
-		Runnable display = new Runnable() {
-			public void run() {
-				status.setText(ss);
-			}
-		};
-		SwingUtilities.invokeLater(display);
+		if (SwingUtilities.isEventDispatchThread()) {
+			status.setText(s);
+		}
+		else {
+			final String ss = s;
+			Runnable display = new Runnable() {
+				public void run() {
+					status.setText(ss);
+				}
+			};
+			SwingUtilities.invokeLater(display);
+		}
 	}
-
 }
