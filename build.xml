@@ -5,6 +5,7 @@
 	<property name="source" value="${basedir}/source"/>
 	<property name="files" value="${source}/files"/>
 	<property name="xsl" value="${source}/xsl"/>
+	<property name="manifest" value="${source}/manifest"/>
 	<property name="java" value="${source}/java"/>
 	<property name="products" value="${basedir}/products"/>
 
@@ -88,6 +89,9 @@
 		</copy>
 		<copy overwrite="true" todir="${zip}">
 			<fileset dir="${xsl}"/>
+		</copy>
+		<copy overwrite="true" todir="${zip}">
+			<fileset dir="${manifest}"/>
 		</copy>
 		<zip destfile="${products}/CTPClient.zip" basedir="${zip}"/>
 		<delete dir="${zip}" failonerror="false" />
