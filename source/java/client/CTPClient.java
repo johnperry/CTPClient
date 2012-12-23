@@ -15,6 +15,7 @@ import java.util.*;
 import javax.swing.*;
 import org.apache.log4j.*;
 import org.rsna.ctp.stdstages.anonymizer.dicom.DAScript;
+import org.rsna.ctp.stdstages.anonymizer.dicom.PixelScript;
 import org.rsna.ctp.stdstages.anonymizer.LookupTable;
 import org.rsna.server.HttpResponse;
 import org.rsna.util.HttpUtil;
@@ -39,10 +40,15 @@ public class CTPClient extends JFrame implements ActionListener {
     JFileChooser chooser = null;
     File dir = null;
 
+    boolean dfEnabled;
+    boolean dpaEnabled;
+
+    Properties config;
     DAScript daScript;
     Properties daScriptProps;
     Properties daLUTProps;
-    Properties config;
+    String dfScript;
+    PixelScript dpaPixelScript;
 
     Log log = new Log();
     IDTable idTable = new IDTable();
@@ -72,10 +78,20 @@ public class CTPClient extends JFrame implements ActionListener {
 		getKeystore();
 
 		//Get the anonymizer script and set the overridden params
-		daScriptProps = getDAScriptProps();
+		daScriptProps = getDAScriptPropsObject();
 
 		//Get the LookupTable and set the overridden params
-		daLUTProps = getDALUTProps();
+		daLUTProps = getDALUTPropsObject();
+
+		//Get the PixelScript
+		dpaPixelScript = getDPAPixelScriptObject();
+
+		//Get the filter script
+		dfScript = getDFScriptObject();
+
+		//Set the enables
+		dfEnabled = config.getProperty("dfEnabled", "no").trim().equals("yes");
+		dpaEnabled = config.getProperty("dpaEnabled", "no").trim().equals("yes");
 
 		//Make the UI components
 		String destinationURL = config.getProperty("url");
@@ -210,11 +226,11 @@ public class CTPClient extends JFrame implements ActionListener {
 		return dp;
 	}
 
-	public Properties getScriptProps() {
+	public Properties getDAScriptProps() {
 		return daScriptProps;
 	}
 
-	public Properties getLUTProps() {
+	public Properties getDALUTProps() {
 		return daLUTProps;
 	}
 
@@ -224,6 +240,28 @@ public class CTPClient extends JFrame implements ActionListener {
 
 	public IDTable getIDTable() {
 		return idTable;
+	}
+
+	public String getDFScript() {
+		return dfScript;
+	}
+
+	public PixelScript getDPAPixelScript() {
+		return dpaPixelScript;
+	}
+
+	public boolean getDFEnabled() {
+		return dfEnabled;
+	}
+
+	public boolean getDPAEnabled() {
+		return dpaEnabled;
+	}
+
+	public boolean getAcceptNonImageObjects() {
+		//Require an explicit acceptance of non-image objects
+		String anio = config.getProperty("acceptNonImageObjects");
+		return (anio != null) && anio.trim().equals("yes");
 	}
 
 	private Properties getProperties(String[] args) {
@@ -264,7 +302,7 @@ public class CTPClient extends JFrame implements ActionListener {
 		return props;
 	}
 
-	private Properties getDAScriptProps() {
+	private Properties getDAScriptPropsObject() {
 		Properties daScriptProps = new Properties();
 		try {
 			File daScriptFile = File.createTempFile("DA-", ".script");
@@ -284,12 +322,12 @@ public class CTPClient extends JFrame implements ActionListener {
 			}
 		}
 		catch (Exception unable) {
-			log.append("Unable to obtain the anonymizer script\n");
+			log.append("Unable to obtain the DicomAnonymizer script\n");
 		}
 		return daScriptProps;
 	}
 
-	private Properties getDALUTProps() {
+	private Properties getDALUTPropsObject() {
 		Properties daLUTProps = new Properties();
 		try {
 			File daLUTFile = File.createTempFile("DA-", ".lut");
@@ -308,9 +346,43 @@ public class CTPClient extends JFrame implements ActionListener {
 			}
 		}
 		catch (Exception unable) {
-			log.append("Unable to obtain the anonymizer LUT\n");
+			log.append("Unable to obtain the DicomAnonymizer LUT\n");
 		}
 		return daLUTProps;
+	}
+
+	private String getDFScriptObject() {
+		String filterScript = null;
+		try {
+			File dfFile = File.createTempFile("DF-", ".script");
+			dfFile.delete();
+			String dfName = config.getProperty("dfName");
+			if (!getTextFileFromServer(dfFile, dfName)) {
+				dfFile = FileUtil.getFile( dfFile, "/DF.script" );
+			}
+			if (dfFile != null) filterScript = FileUtil.getText(dfFile);
+		}
+		catch (Exception unable) {
+			log.append("Unable to obtain the DicomFilter script\n");
+		}
+		return filterScript;
+	}
+
+	private PixelScript getDPAPixelScriptObject() {
+		PixelScript pixelScript = null;
+		try {
+			File dpaFile = File.createTempFile("DPA-", ".script");
+			dpaFile.delete();
+			String daLUTName = config.getProperty("dpaName");
+			if (!getTextFileFromServer(dpaFile, daLUTName)) {
+				dpaFile = FileUtil.getFile( dpaFile, "/DPA.script" );
+			}
+			if (dpaFile != null) pixelScript = new PixelScript(dpaFile);
+		}
+		catch (Exception unable) {
+			log.append("Unable to obtain the DicomPixelAnonymizer script\n");
+		}
+		return pixelScript;
 	}
 
 	private void getKeystore() {
