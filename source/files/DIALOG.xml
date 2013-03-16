@@ -1,0 +1,24 @@
+<dialog title="New Patient">
+    <h>New Patient</h>
+    <h align="left">Site Parameters</h>
+    <p>
+        Enter the ID value for this site.
+    </p>
+    <param
+        name="@SITEID"
+        label="Site ID:"
+        value=""/>
+    <h align="left">Patient Parameters</h>
+    <p>
+        Enter the ID and name values for this patient.
+    </p>
+    <param
+        name="@SUBJECTID"
+        label="Subject ID:"
+        value=""/>
+    <param
+        name="@SUBJECTNAME"
+        label="Subject Name:"
+        value=""/>
+</dialog>
+

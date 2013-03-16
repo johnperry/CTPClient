@@ -21,6 +21,8 @@ import org.rsna.server.HttpResponse;
 import org.rsna.util.HttpUtil;
 import org.rsna.util.FileUtil;
 import org.rsna.util.StringUtil;
+import org.rsna.util.XmlUtil;
+import org.w3c.dom.Document;
 
 public class CTPClient extends JFrame implements ActionListener {
 
@@ -30,12 +32,14 @@ public class CTPClient extends JFrame implements ActionListener {
     JScrollPane sp;
     DirectoryPanel dp;
     StatusPane status;
+    DialogPanel dialog = null;
     volatile boolean sending = false;
 
-    InputText destinationField;
-    FieldButton browseButton;
-    FieldButton helpButton;
-    FieldButton startButton;
+    InputText destinationField = null;
+    FieldButton browseButton = null;
+    FieldButton dialogButton = null;
+    FieldButton helpButton = null;
+    FieldButton startButton = null;
 
     JFileChooser chooser = null;
     File dir = null;
@@ -76,6 +80,9 @@ public class CTPClient extends JFrame implements ActionListener {
 
 		//Set the SSL params
 		getKeystore();
+
+		//Get the DialogPanel if specified
+		dialog = getDialogPanel();
 
 		//Get the anonymizer script and set the overridden params
 		daScriptProps = getDAScriptPropsObject();
@@ -136,10 +143,18 @@ public class CTPClient extends JFrame implements ActionListener {
 
 		Box buttonBox = Box.createHorizontalBox();
 		buttonBox.setBackground(bgColor);
-		buttonBox.add(browseButton);
 
-		helpURL = config.getProperty("helpURL");
-		helpURL = (helpURL != null) ? helpURL.trim() : "";
+		if (dialog != null) {
+			dialogButton = new FieldButton(dialog.getTitle());
+			dialogButton.setEnabled(true);
+			dialogButton.addActionListener(this);
+			buttonBox.add(dialogButton);
+			buttonBox.add(Box.createHorizontalStrut(20));
+		}
+		else dialogButton = new FieldButton("unused");
+
+		buttonBox.add(browseButton);
+		helpURL = config.getProperty("helpURL", "").trim();
 		if (!helpURL.equals("")) {
 			buttonBox.add(Box.createHorizontalStrut(20));
 			buttonBox.add(helpButton);
@@ -193,12 +208,18 @@ public class CTPClient extends JFrame implements ActionListener {
 			}
 			else startButton.setEnabled(false);
 		}
+		else if (source.equals(dialogButton)) {
+			displayDialog();
+		}
 		else if (source.equals(startButton)) {
-			startButton.setEnabled(false);
-			browseButton.setEnabled(false);
-			sending = true;
-			SenderThread sender = new SenderThread(this);
-			sender.start();
+			if (displayDialog()) {
+				startButton.setEnabled(false);
+				dialogButton.setEnabled(false);
+				browseButton.setEnabled(false);
+				sending = true;
+				SenderThread sender = new SenderThread(this);
+				sender.start();
+			}
 		}
 		else if (source.equals(helpButton)) {
 			String helpURL = config.getProperty("helpURL");
@@ -208,11 +229,44 @@ public class CTPClient extends JFrame implements ActionListener {
 		}
 	}
 
+	private boolean displayDialog() {
+		if (dialog != null) {
+			int result = JOptionPane.showOptionDialog(
+							this,
+							dialog,
+							dialog.getTitle(),
+							JOptionPane.OK_CANCEL_OPTION,
+							JOptionPane.QUESTION_MESSAGE,
+							null, //icon
+							null, //options
+							null); //initialValue
+			if (result == JOptionPane.OK_OPTION) {
+				dialog.setProperties(config);
+				for (String configProp : config.stringPropertyNames()) {
+					if (configProp.startsWith("$")) {
+						String value = config.getProperty(configProp);
+						String key = configProp.substring(1);
+						daLUTProps.setProperty(key, value);
+					}
+					else if (configProp.startsWith("@")) {
+						String value = config.getProperty(configProp);
+						String key = "param." + configProp.substring(1);
+						daScriptProps.setProperty(key, value);
+					}
+				}
+				return true;
+			}
+			else return false;
+		}
+		return true;
+	}
+
 	public void transmissionComplete() {
 		sending = false;
 		Runnable enable = new Runnable() {
 			public void run() {
 				browseButton.setEnabled(true);
+				dialogButton.setEnabled(true);
 			}
 		};
 		SwingUtilities.invokeLater(enable);
@@ -260,8 +314,8 @@ public class CTPClient extends JFrame implements ActionListener {
 
 	public boolean getAcceptNonImageObjects() {
 		//Require an explicit acceptance of non-image objects
-		String anio = config.getProperty("acceptNonImageObjects");
-		return (anio != null) && anio.trim().equals("yes");
+		String anio = config.getProperty("acceptNonImageObjects", "");
+		return anio.trim().equals("yes");
 	}
 
 	private Properties getProperties(String[] args) {
@@ -300,6 +354,26 @@ public class CTPClient extends JFrame implements ActionListener {
 			log.append("Unable to load the config properties\n");
 		}
 		return props;
+	}
+
+	private DialogPanel getDialogPanel() {
+		if (config.getProperty("dialogEnabled", "").equals("yes")) {
+			try {
+				File dialogFile = File.createTempFile("DIALOG-", ".xml");
+				dialogFile.delete();
+				String dialogName = config.getProperty("dialogName", "DIALOG.xml");
+				if (!getTextFileFromServer(dialogFile, dialogName)) {
+					File localFile = new File(dialogName);
+					if (localFile.exists()) FileUtil.copy(localFile, dialogFile);
+					else FileUtil.getFile( dialogFile, "/DIALOG.xml" );
+				}
+				//Now parse the file
+				Document doc = XmlUtil.getDocument(dialogFile);
+				return new DialogPanel(doc, config);
+			}
+			catch (Exception unable) { }
+		}
+		return null;
 	}
 
 	private Properties getDAScriptPropsObject() {
@@ -387,7 +461,7 @@ public class CTPClient extends JFrame implements ActionListener {
 
 	private void getKeystore() {
 		try {
-			File keystore = File.createTempFile("DA-", ".lut");
+			File keystore = File.createTempFile("CC-", ".keystore");
 			keystore.delete();
 			FileUtil.getFile( keystore, "/keystore" );
 			System.setProperty("javax.net.ssl.keyStore", keystore.getAbsolutePath());

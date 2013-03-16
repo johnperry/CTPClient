@@ -15,6 +15,7 @@ import org.rsna.server.*;
 import org.rsna.util.*;
 import org.rsna.ctp.objects.*;
 import org.rsna.ctp.stdstages.anonymizer.dicom.DICOMAnonymizer;
+import org.rsna.ctp.stdstages.anonymizer.dicom.DICOMDecompressor;
 import org.rsna.ctp.stdstages.anonymizer.dicom.DICOMPixelAnonymizer;
 import org.rsna.ctp.stdstages.anonymizer.dicom.PixelScript;
 import org.rsna.ctp.stdstages.anonymizer.dicom.Signature;
@@ -138,6 +139,7 @@ public class SenderThread extends Thread {
 				if (signature != null) {
 					Regions regions = signature.regions;
 					if ((regions != null) && (regions.size() > 0)) {
+						if (dob.isEncapsulated()) DICOMDecompressor.decompress(temp, temp);
 						AnonymizerStatus status = DICOMPixelAnonymizer.anonymize(temp, temp, regions);
 						if (status.isOK()) {
 							try { dob = new DicomObject(temp); }

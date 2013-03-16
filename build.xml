@@ -35,8 +35,8 @@
 		</tstamp>
 		<echo message="Time now ${now}"/>
 		<echo message="ant.java.version = ${ant.java.version}" />
-		<mkdir dir="${build}"/>
 		<delete dir="${products}" failonerror="false" />
+		<mkdir dir="${build}"/>
 		<mkdir dir="${products}"/>
 	</target>
 
@@ -56,7 +56,7 @@
 			<manifest>
 				<attribute name="Main-Class" value="client.CTPClient"/>
 				<attribute name="Implementation-Version" value="${today} @ ${now}"/>
-				<attribute name="Class-Path" value="util.jar log4j.jar dcm4che.jar CTP.jar"/>
+				<attribute name="Class-Path" value="util.jar log4j.jar dcm4che.jar dcm4che-imageio-rle-2.0.25.jar CTP.jar"/>
 			</manifest>
 			<fileset dir="${build}" includes="**"/>
 		</jar>

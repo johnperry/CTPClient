@@ -193,7 +193,8 @@ public class RowLayout implements LayoutManager2 {
 		//column of the span.
 		if (largestSpan > 1) {
 			for (int column=0; column<maxRowLength; column++) {
-				for (int colspan=2; colspan<largestSpan; colspan++) {
+				for (int colspan=2; colspan<=largestSpan; colspan++) {
+					x = 0;
 					for (int i=0; i<components.length; i++) {
 						if (components[i] instanceof CRLF) {
 							x = 0;
@@ -205,9 +206,12 @@ public class RowLayout implements LayoutManager2 {
 								if (w == colspan) {
 									d = components[i].getPreferredSize();
 									int spanWidth = hGap * (w - 1);
-									for (int k=x; k<x+w; k++) spanWidth += columnWidth[k];
+									for (int k=x; k<Math.min(x+w, columnWidth.length); k++) {
+										spanWidth += columnWidth[k];
+									}
 									if (spanWidth < d.width) {
-										columnWidth[x + w - 1] += d.width - spanWidth;
+										int colToFix = Math.min(x+w, columnWidth.length) -1;
+										columnWidth[colToFix] += d.width - spanWidth;
 									}
 								}
 							}
