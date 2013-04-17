@@ -10,6 +10,7 @@ package client;
 import java.awt.*;
 import java.io.*;
 import javax.swing.*;
+import org.rsna.ui.RowLayout;
 
 public class DirectoryPanel extends JPanel {
 
@@ -18,7 +19,7 @@ public class DirectoryPanel extends JPanel {
 		setLayout(new RowLayout());
 		setBackground(Color.WHITE);
 	}
-	
+
 	public void clear() {
 		removeAll();
 	}

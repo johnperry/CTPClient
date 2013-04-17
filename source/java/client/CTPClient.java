@@ -18,8 +18,9 @@ import org.rsna.ctp.stdstages.anonymizer.dicom.DAScript;
 import org.rsna.ctp.stdstages.anonymizer.dicom.PixelScript;
 import org.rsna.ctp.stdstages.anonymizer.LookupTable;
 import org.rsna.server.HttpResponse;
-import org.rsna.util.HttpUtil;
+import org.rsna.ui.RowLayout;
 import org.rsna.util.FileUtil;
+import org.rsna.util.HttpUtil;
 import org.rsna.util.StringUtil;
 import org.rsna.util.XmlUtil;
 import org.w3c.dom.Document;
@@ -371,7 +372,11 @@ public class CTPClient extends JFrame implements ActionListener {
 				Document doc = XmlUtil.getDocument(dialogFile);
 				return new DialogPanel(doc, config);
 			}
-			catch (Exception unable) { }
+			catch (Exception unable) {
+				StringWriter sw = new StringWriter();
+				unable.printStackTrace(new PrintWriter(sw));
+				JOptionPane.showMessageDialog(this, "Exception in getDialogPanel:\n"+sw.toString());
+			}
 		}
 		return null;
 	}
