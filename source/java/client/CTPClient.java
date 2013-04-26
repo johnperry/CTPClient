@@ -19,6 +19,7 @@ import org.rsna.ctp.stdstages.anonymizer.dicom.PixelScript;
 import org.rsna.ctp.stdstages.anonymizer.LookupTable;
 import org.rsna.server.HttpResponse;
 import org.rsna.ui.RowLayout;
+import org.rsna.util.BrowserUtil;
 import org.rsna.util.FileUtil;
 import org.rsna.util.HttpUtil;
 import org.rsna.util.StringUtil;
@@ -321,11 +322,18 @@ public class CTPClient extends JFrame implements ActionListener {
 
 	private Properties getProperties(String[] args) {
 		Properties props = new Properties();
+
+		//Put in the default titles
+		props.setProperty("windowTitle", title);
+		props.setProperty("panelTitle", title);
+
 		try {
+			//Get the config file from the jar
 			File configFile = File.createTempFile("CONFIG-", ".properties");
 			configFile.delete();
 			FileUtil.getFile( configFile, "/config.properties" );
 
+			//Load it
 			FileInputStream stream = null;
 			try {
 				stream = new FileInputStream(configFile);
@@ -333,10 +341,6 @@ public class CTPClient extends JFrame implements ActionListener {
 			}
 			catch (Exception ignore) { }
 			FileUtil.close(stream);
-
-			//Put in the default title
-			props.setProperty("windowTitle", title);
-			props.setProperty("panelTitle", title);
 
 			//Add in the args
 			for (String arg : args) {
