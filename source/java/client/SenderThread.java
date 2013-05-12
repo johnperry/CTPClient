@@ -140,7 +140,7 @@ public class SenderThread extends Thread {
 					Regions regions = signature.regions;
 					if ((regions != null) && (regions.size() > 0)) {
 						if (dob.isEncapsulated()) DICOMDecompressor.decompress(temp, temp);
-						AnonymizerStatus status = DICOMPixelAnonymizer.anonymize(temp, temp, regions);
+						AnonymizerStatus status = DICOMPixelAnonymizer.anonymize(temp, temp, regions, false);
 						if (status.isOK()) {
 							try { dob = new DicomObject(temp); }
 							catch (Exception unable) {

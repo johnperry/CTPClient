@@ -33,13 +33,13 @@
             <argument>"protocol=<xsl:value-of select="environment/protocol"/>"</argument>
             <argument>"host=<xsl:value-of select="environment/host"/>"</argument>
             <argument>"application=<xsl:value-of select="environment/application"/>"</argument>
-            <xsl:apply-templates select="params/*"/>
+            <xsl:apply-templates select="params/param"/>
         </application-desc>
     </jnlp>
 </xsl:template>
 
-<xsl:template match="*">
-    <argument>"<xsl:value-of select="local-name()"/>=<xsl:value-of select="."/>"</argument>
+<xsl:template match="param">
+    <argument>"<xsl:value-of select="."/>"</argument>
 </xsl:template>
 
 </xsl:stylesheet>

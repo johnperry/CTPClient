@@ -20,8 +20,10 @@ import org.w3c.dom.*;
 
 public class DialogPanel extends JPanel {
 
-	private static final Font headingFont = new Font( "SansSerif", Font.BOLD, 16 );
 	private static final Color headingColor = Color.BLUE;
+	private static final Color paragraphColor = Color.BLACK;
+	private static final Font headingFont = new Font( "SansSerif", Font.BOLD, 16 );
+	private static final Font paragraphFont = new Font( "SansSerif", Font.PLAIN, 12 );
 	private static final Font labelFont = new Font( "SansSerif", Font.BOLD, 12 );
 	private static final Font fieldFont = new Font( "Monospaced", Font.PLAIN, 12 );
 	private static final int fieldWidth = 30;
@@ -79,28 +81,55 @@ public class DialogPanel extends JPanel {
 
 			add(h, new Integer(2));
 			add(RowLayout.crlf());
+			add(Box.createVerticalStrut(5));
+			add(RowLayout.crlf());
 		}
 	}
 
 	private void addP(Element el) {
-		add(RowLayout.crlf());
+		String text = el.getTextContent().trim();
+		if (!text.equals("")) {
+			String align = el.getAttribute("align").trim();
+			String[] lines = text.split("\n");
+			for (String line : lines) {
+				JLabel t = new JLabel(line.trim());
+				t.setFont(paragraphFont);
+				t.setForeground(paragraphColor);
+
+				if (align.equals("center")) t.setAlignmentX(0.5f);
+				else if (align.equals("right")) t.setAlignmentX(1.0f);
+				else t.setAlignmentX(0.0f);
+
+				add(t, new Integer(2));
+				add(RowLayout.crlf());
+			}
+		}
 	}
 
 	private void addParam(Element el, Properties config) {
 		String name = el.getAttribute("name").trim();
 		String label = el.getAttribute("label").trim();
 		String value = el.getAttribute("value").trim();
+		boolean readonly = el.getAttribute("readonly").trim().equals("yes");
 
 		JLabel jl = new JLabel(label);
 		jl.setFont(labelFont);
 		add(jl);
 
-		if (value.equals("")) value = config.getProperty(name, "");
-		JTextField jtf = new JTextField(value, fieldWidth);
-		jtf.setFont(fieldFont);
-		add(jtf);
+		if (value.equals("") && !name.equals("")) value = config.getProperty(name, "");
+		if (value == null) value = "";
 
-		fields.put(name, jtf);
+		if (!readonly) {
+			JTextField jtf = new JTextField(value, fieldWidth);
+			jtf.setFont(fieldFont);
+			add(jtf);
+			fields.put(name, jtf);
+		}
+		else {
+			JLabel jlb = new JLabel(value);
+			jlb.setFont(fieldFont);
+			add(jlb);
+		}
 
 		add(RowLayout.crlf());
 	}
