@@ -21,6 +21,7 @@ public class DirectoryCheckBox extends JCheckBox implements ActionListener {
 		this.dp = dp;
 		setSelected(false);
 		addActionListener(this);
+		setBackground(Color.white);
 	}
 
 	public void actionPerformed(ActionEvent event) {

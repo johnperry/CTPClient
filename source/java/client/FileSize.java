@@ -18,6 +18,7 @@ public class FileSize extends JLabel {
 		setText( String.format("%,d", file.length()) );
 		setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
 		setAlignmentX(1.0f);
+		setAlignmentY(0.0f);
 	}
 }
 
