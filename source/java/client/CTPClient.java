@@ -48,6 +48,7 @@ public class CTPClient extends JFrame implements ActionListener {
 
     boolean dfEnabled;
     boolean dpaEnabled;
+    boolean setBurnedInAnnotation = false;
 
     Properties config;
     DAScript daScript;
@@ -101,6 +102,7 @@ public class CTPClient extends JFrame implements ActionListener {
 		//Set the enables
 		dfEnabled = config.getProperty("dfEnabled", "no").trim().equals("yes");
 		dpaEnabled = config.getProperty("dpaEnabled", "no").trim().equals("yes");
+		setBurnedInAnnotation = config.getProperty("setBurnedInAnnotation", "no").trim().equals("yes");
 
 		//Make the UI components
 		String destinationURL = config.getProperty("url");
@@ -312,6 +314,10 @@ public class CTPClient extends JFrame implements ActionListener {
 
 	public boolean getDPAEnabled() {
 		return dpaEnabled;
+	}
+
+	public boolean getSetBurnedInAnnotation() {
+		return setBurnedInAnnotation;
 	}
 
 	public boolean getAcceptNonImageObjects() {

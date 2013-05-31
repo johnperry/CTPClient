@@ -36,6 +36,7 @@ public class SenderThread extends Thread {
 	boolean acceptNonImageObjects;
 	boolean dfEnabled;
 	boolean dpaEnabled;
+	boolean setBurnedInAnnotation = false;
 
     public SenderThread (CTPClient parent) {
 		super("SenderThread");
@@ -50,6 +51,7 @@ public class SenderThread extends Thread {
 		this.dpaPixelScript = parent.getDPAPixelScript();
 		this.dfEnabled = parent.getDFEnabled();
 		this.dpaEnabled = parent.getDPAEnabled();
+		this.setBurnedInAnnotation = parent.getSetBurnedInAnnotation();
 		this.parent = parent;
 	}
 
@@ -140,7 +142,7 @@ public class SenderThread extends Thread {
 					Regions regions = signature.regions;
 					if ((regions != null) && (regions.size() > 0)) {
 						if (dob.isEncapsulated()) DICOMDecompressor.decompress(temp, temp);
-						AnonymizerStatus status = DICOMPixelAnonymizer.anonymize(temp, temp, regions, false);
+						AnonymizerStatus status = DICOMPixelAnonymizer.anonymize(temp, temp, regions, setBurnedInAnnotation, false);
 						if (status.isOK()) {
 							try { dob = new DicomObject(temp); }
 							catch (Exception unable) {
