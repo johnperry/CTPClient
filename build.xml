@@ -8,6 +8,7 @@
 	<property name="manifest" value="${source}/manifest"/>
 	<property name="java" value="${source}/java"/>
 	<property name="products" value="${basedir}/products"/>
+	<property name="ctp" value="../CTP"/>
 
 	<property name="zip" value="${basedir}/zip"/>
 
@@ -40,7 +41,20 @@
 		<mkdir dir="${products}"/>
 	</target>
 
-	<target name="jar" depends="init">
+	<target name="getLibraryJars">
+		<copy overwrite="true" todir="${libraries}">
+			<fileset dir="${ctp}/libraries">
+				<include name="CTP.jar"/>
+				<include name="dcm4che.jar"/>
+				<include name="dcm4che-imageio-rle-2.0.25.jar"/>
+				<include name="log4j.jar"/>
+				<include name="util.jar"/>
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="jar" depends="init, getLibraryJars">
+
 		<javac destdir="${build}" optimize="on"
 				classpathref="classpath"
 				includeantruntime="false"
@@ -60,6 +74,7 @@
 			</manifest>
 			<fileset dir="${build}" includes="**"/>
 		</jar>
+
 	</target>
 
 	<target name="sign" depends="jar">
