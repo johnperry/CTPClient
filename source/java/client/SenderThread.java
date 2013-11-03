@@ -25,6 +25,7 @@ import org.rsna.ctp.stdstages.anonymizer.AnonymizerStatus;
 public class SenderThread extends Thread {
 
 	String urlString;
+	File exportDirectory = null;
 	DirectoryPanel dp;
 	CTPClient parent;
 	Properties daScriptProps;
@@ -52,6 +53,7 @@ public class SenderThread extends Thread {
 		this.dfEnabled = parent.getDFEnabled();
 		this.dpaEnabled = parent.getDPAEnabled();
 		this.setBurnedInAnnotation = parent.getSetBurnedInAnnotation();
+		this.exportDirectory = parent.getExportDirectory();
 		this.parent = parent;
 	}
 
@@ -99,9 +101,28 @@ public class SenderThread extends Thread {
 							if (dob != null) {
 								String anonPatientID = dob.getPatientID();
 								idTable.put(phiPatientID, anonPatientID);
-								export(dob.getFile());
-								successes++;
-								fileStatus.setText(Color.black, "[OK]");
+
+								//Copy the file to the export directory, if so configured
+								boolean fileExportOK = true;
+								if (exportDirectory != null) {
+									exportDirectory.mkdirs();
+									String name = dob.getSOPInstanceUID();
+									File tempFile = new File(exportDirectory, name+".partial");
+									File savedFile = new File(exportDirectory, name);
+									fileExportOK = dob.copyTo(tempFile) && tempFile.renameTo(savedFile);
+								}
+
+								//Do the HTTP export, if so configured
+								boolean httpExportOK = true;
+								if ((urlString != null) && !urlString.equals("")) {
+									httpExportOK =  export(dob.getFile());
+								}
+
+								//Count the complete successes
+								boolean ok = fileExportOK && httpExportOK;
+								if (ok) successes++;
+								String status = ok ? "OK" : "FAILED";
+								fileStatus.setText(Color.black, "["+status+"]");
 								dob.getFile().delete();
 							}
 						}
