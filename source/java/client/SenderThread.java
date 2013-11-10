@@ -33,7 +33,6 @@ public class SenderThread extends Thread {
 	IDTable idTable;
 	String dfScript;
 	PixelScript dpaPixelScript;
-	Log log;
 	boolean acceptNonImageObjects;
 	boolean dfEnabled;
 	boolean dpaEnabled;
@@ -46,7 +45,6 @@ public class SenderThread extends Thread {
 		this.daScriptProps = parent.getDAScriptProps();
 		this.daLUTProps = parent.getDALUTProps();
 		this.idTable = parent.getIDTable();
-		this.log = parent.getLog();
 		this.acceptNonImageObjects = parent.getAcceptNonImageObjects();
 		this.dfScript = parent.getDFScript();
 		this.dpaPixelScript = parent.getDPAPixelScript();
@@ -108,7 +106,8 @@ public class SenderThread extends Thread {
 									exportDirectory.mkdirs();
 									String name = dob.getSOPInstanceUID();
 									File tempFile = new File(exportDirectory, name+".partial");
-									File savedFile = new File(exportDirectory, name);
+									File savedFile = new File(exportDirectory, name+".dcm");
+									dob.setStandardExtension();
 									fileExportOK = dob.copyTo(tempFile) && tempFile.renameTo(savedFile);
 								}
 
@@ -124,6 +123,9 @@ public class SenderThread extends Thread {
 								String status = ok ? "OK" : "FAILED";
 								fileStatus.setText(Color.black, "["+status+"]");
 								dob.getFile().delete();
+
+								//If we are configured to delete from the original directory, do it.
+								if (ok && dp.deleteOnSuccess()) file.delete();
 							}
 						}
 						else fileStatus.setText(Color.blue, "[REJECTED by DicomFilter]");
@@ -137,7 +139,7 @@ public class SenderThread extends Thread {
 				fileStatus.setText(Color.red, "[FAILED]");
 				StringWriter sw = new StringWriter();
 				ex.printStackTrace(new PrintWriter(sw));
-				log.append(sw.toString());
+				Log.getInstance().append("exportDirectory: "+exportDirectory+"\nurlString:"+urlString+"\n"+sw.toString());
 			}
 		}
 		statusPane.setText( "Processsing complete: "

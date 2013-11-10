@@ -10,7 +10,7 @@
         <information>
             <title>CTP Client Utility</title>
             <vendor>RSNA</vendor>
-            <homepage href="http://mircwiki.rsna.org//index.php?title=CTP-The_RSNA_Clinical_Trial_Processor"/>
+            <homepage href="http://mircwiki.rsna.org/index.php?title=CTP-The_RSNA_Clinical_Trial_Processor"/>
             <description>CTP Client Utility</description>
             <description kind="short">Java Web Start program for transmitting data to CTP for clinical trials.</description>
             <!-- <offline-allowed/> -->

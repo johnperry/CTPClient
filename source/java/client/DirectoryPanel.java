@@ -14,6 +14,8 @@ import org.rsna.ui.RowLayout;
 
 public class DirectoryPanel extends JPanel {
 
+	boolean deleteOnSuccess = false;
+
 	public DirectoryPanel() {
 		super();
 		setLayout(new RowLayout());
@@ -22,5 +24,13 @@ public class DirectoryPanel extends JPanel {
 
 	public void clear() {
 		removeAll();
+	}
+
+	public void setDeleteOnSuccess(boolean delete) {
+		deleteOnSuccess = delete;
+	}
+
+	public boolean deleteOnSuccess() {
+		return deleteOnSuccess;
 	}
 }

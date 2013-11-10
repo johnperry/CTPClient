@@ -23,6 +23,7 @@ import org.rsna.ui.RowLayout;
 import org.rsna.util.BrowserUtil;
 import org.rsna.util.FileUtil;
 import org.rsna.util.HttpUtil;
+import org.rsna.util.IPUtil;
 import org.rsna.util.StringUtil;
 import org.rsna.util.XmlUtil;
 import org.w3c.dom.Document;
@@ -50,6 +51,10 @@ public class CTPClient extends JFrame implements ActionListener {
 
     boolean dfEnabled;
     boolean dpaEnabled;
+    boolean showURL = true;
+    boolean showDialogButton = true;
+    boolean showBrowseButton = true;
+
     boolean setBurnedInAnnotation = false;
 
     Properties config;
@@ -59,12 +64,12 @@ public class CTPClient extends JFrame implements ActionListener {
     String dfScript;
     PixelScript dpaPixelScript;
 
-    Log log = new Log();
     IDTable idTable = new IDTable();
 
     int scpPort;
     File scpDirectory = null;
     SimpleDicomStorageSCP scp = null;
+    String ipAddressString = "";
 
     String browsePrompt = "Select a directory containing data to transmit.";
     String helpURL;
@@ -84,6 +89,22 @@ public class CTPClient extends JFrame implements ActionListener {
 
 		//Get the properties, including the default title and the args
 		config = getProperties(args);
+
+		//Set up the SCP directory
+		scpPort = StringUtil.getInt( config.getProperty("scpPort"), 0 );
+		if (scpPort > 0) {
+			try {
+				scpDirectory = File.createTempFile("TMP-", "");
+				scpDirectory.delete();
+				scpDirectory.mkdirs();
+			}
+			catch (Exception ignoreForNow) { }
+		}
+
+		//Get the button enables
+		showURL = !config.getProperty("showURL", "yes").equals("no");
+		showBrowseButton = !config.getProperty("showBrowseButton", "yes").equals("no") || (scpPort <= 0);
+		showDialogButton = !config.getProperty("showDialogButton", "yes").equals("no");
 
 		setTitle(config.getProperty("windowTitle"));
 		JPanel panel = new JPanel(new BorderLayout());
@@ -107,17 +128,6 @@ public class CTPClient extends JFrame implements ActionListener {
 		//Get the filter script
 		dfScript = getDFScriptObject();
 
-		//Set up the SCP directory
-		scpPort = StringUtil.getInt( config.getProperty("scpPort"), 0 );
-		if (scpPort > 0) {
-			try {
-				scpDirectory = File.createTempFile("TMP-", "");
-				scpDirectory.delete();
-				scpDirectory.mkdirs();
-			}
-			catch (Exception ignoreForNow) { }
-		}
-
 		//Set up the exportDirectory
 		String expDir = config.getProperty("exportDirectory");
 		if (expDir != null) exportDirectory = new File(expDir);
@@ -131,12 +141,12 @@ public class CTPClient extends JFrame implements ActionListener {
 		String destinationURL = config.getProperty("url");
 		destinationURL = (destinationURL != null) ? destinationURL.trim() : "";
 		destinationField = new InputText(destinationURL);
-		browseButton = new FieldButton("Open Image Directory");
+		browseButton = new FieldButton("Open Local Folder");
 		browseButton.setEnabled(true);
 		browseButton.addActionListener(this);
 
 		if (scpPort > 0) {
-			scpButton = new FieldButton("Open SCP Directory");
+			scpButton = new FieldButton("Open DICOM Storage");
 			scpButton.setEnabled(true);
 			scpButton.addActionListener(this);
 		}
@@ -165,7 +175,7 @@ public class CTPClient extends JFrame implements ActionListener {
 		vBox.setBorder(BorderFactory.createEmptyBorder(0,0,10,0));
 		vBox.setBackground(bgColor);
 
-		if (!config.getProperty("showURL", "yes").equals("no")) {
+		if (showURL) {
 			Box destBox = Box.createHorizontalBox();
 			destBox.setBackground(bgColor);
 			destBox.add(new FieldLabel("Destination URL:"));
@@ -178,7 +188,7 @@ public class CTPClient extends JFrame implements ActionListener {
 		Box buttonBox = Box.createHorizontalBox();
 		buttonBox.setBackground(bgColor);
 
-		if (dialog != null) {
+		if ((dialog != null) && showDialogButton) {
 			dialogButton = new FieldButton(dialog.getTitle());
 			dialogButton.setEnabled(true);
 			dialogButton.addActionListener(this);
@@ -187,10 +197,12 @@ public class CTPClient extends JFrame implements ActionListener {
 		}
 		else dialogButton = new FieldButton("unused");
 
-		buttonBox.add(browseButton);
+		if (showBrowseButton) {
+			buttonBox.add(browseButton);
+			if (scpPort > 0) buttonBox.add(Box.createHorizontalStrut(20));
+		}
 
 		if (scpPort > 0) {
-			buttonBox.add(Box.createHorizontalStrut(20));
 			buttonBox.add(scpButton);
 		}
 
@@ -236,17 +248,20 @@ public class CTPClient extends JFrame implements ActionListener {
 		//Start the SCP if so configured.
 		if (scpPort > 0) {
 			try {
+				ipAddressString = IPUtil.getIPAddress() + ":" + scpPort + " [AET: CTP]";
 				scp = new SimpleDicomStorageSCP(scpDirectory, scpPort);
 				scp.start();
-				status.setText("DICOM Storage SCP open on port "+scpPort+". ("+scpDirectory+")");
+				status.setText("DICOM Storage SCP open on "+ipAddressString+".");
 			}
 			catch (Exception ex) {
-				scp = null;
 				JOptionPane.showMessageDialog(
 					this,
-					"Unable to start the\nDICOM Storage SCP\non port "+scpPort);
+					"Unable to start the\nDICOM Storage SCP on\n"+ipAddressString);
+				System.exit(0);
 			}
 		}
+
+		displayInstructions("");
 	}
 
 	public void actionPerformed(ActionEvent event) {
@@ -255,7 +270,10 @@ public class CTPClient extends JFrame implements ActionListener {
 			dir = getDirectory();
 			if (dir != null) {
 				dp.clear();
-				listFiles(dir);
+				dp.setDeleteOnSuccess(false);
+				ButtonGroup buttonGroup = new ButtonGroup();
+				listFiles(dir, buttonGroup);
+				clickFirstStudy(buttonGroup);
 				startButton.setEnabled(true);
 				invalidate();
 				validate();
@@ -266,7 +284,10 @@ public class CTPClient extends JFrame implements ActionListener {
 		else if (source.equals(scpButton)) {
 			if (scpDirectory != null) {
 				dp.clear();
-				listFiles(scpDirectory);
+				dp.setDeleteOnSuccess(true);
+				ButtonGroup buttonGroup = new ButtonGroup();
+				listFiles(scpDirectory, buttonGroup);
+				clickFirstStudy(buttonGroup);
 				startButton.setEnabled(true);
 				invalidate();
 				validate();
@@ -292,6 +313,35 @@ public class CTPClient extends JFrame implements ActionListener {
 				BrowserUtil.openURL(helpURL);
 			}
 		}
+	}
+
+	public void displayInstructions(String text) {
+		StringBuffer sb = new StringBuffer(text);
+		if ((scp != null)) {
+			sb.append("To process and transmit images received from a PACS or workstation:\n");
+			sb.append("  1. Send images to "+ ipAddressString+"\n");
+			sb.append("  2. Click the Open DICOM Storage button.\n");
+			sb.append("  3. Check the boxes of the images to be transmitted.\n");
+			sb.append("  4. Click the Start button.\n");
+			if (dialog != null) {
+				sb.append("  5. Fill in the fields in the dialog.\n");
+				sb.append("  6. Click OK on the dialog.\n");
+			}
+		}
+		if (showBrowseButton) {
+			if (sb.length() > 0) sb.append("\n");
+			sb.append("To process and transmit images stored on this computer:\n");
+			sb.append("  1. Click the Open Local Folder button\n");
+			sb.append("  2. Navigate to a folder containing images.\n");
+			sb.append("  3. Click OK on the file dialog.\n");
+			sb.append("  4. Check the boxes of the images to be transmitted.\n");
+			sb.append("  5. Click the Start button.\n");
+			if (dialog != null) {
+				sb.append("  6. Fill in the fields in the dialog.\n");
+				sb.append("  7. Click OK on the dialog.\n");
+			}
+		}
+		JOptionPane.showMessageDialog(this, sb.toString(), "Instructions", JOptionPane.PLAIN_MESSAGE);
 	}
 
 	private boolean displayDialog() {
@@ -338,7 +388,7 @@ public class CTPClient extends JFrame implements ActionListener {
 	}
 
 	public String getDestinationURL() {
-		return destinationField.getText();
+		return destinationField.getText().trim();
 	}
 
 	public File getExportDirectory() {
@@ -355,10 +405,6 @@ public class CTPClient extends JFrame implements ActionListener {
 
 	public Properties getDALUTProps() {
 		return daLUTProps;
-	}
-
-	public Log getLog() {
-		return log;
 	}
 
 	public IDTable getIDTable() {
@@ -427,7 +473,7 @@ public class CTPClient extends JFrame implements ActionListener {
 			}
 		}
 		catch (Exception noProps) {
-			log.append("Unable to load the config properties\n");
+			Log.getInstance().append("Unable to load the config properties\n");
 		}
 		return props;
 	}
@@ -476,7 +522,7 @@ public class CTPClient extends JFrame implements ActionListener {
 			}
 		}
 		catch (Exception unable) {
-			log.append("Unable to obtain the DicomAnonymizer script\n");
+			Log.getInstance().append("Unable to obtain the DicomAnonymizer script\n");
 		}
 		return daScriptProps;
 	}
@@ -500,7 +546,7 @@ public class CTPClient extends JFrame implements ActionListener {
 			}
 		}
 		catch (Exception unable) {
-			log.append("Unable to obtain the DicomAnonymizer LUT\n");
+			Log.getInstance().append("Unable to obtain the DicomAnonymizer LUT\n");
 		}
 		return daLUTProps;
 	}
@@ -517,7 +563,7 @@ public class CTPClient extends JFrame implements ActionListener {
 			if (dfFile != null) filterScript = FileUtil.getText(dfFile);
 		}
 		catch (Exception unable) {
-			log.append("Unable to obtain the DicomFilter script\n");
+			Log.getInstance().append("Unable to obtain the DicomFilter script\n");
 		}
 		return filterScript;
 	}
@@ -534,7 +580,7 @@ public class CTPClient extends JFrame implements ActionListener {
 			if (dpaFile != null) pixelScript = new PixelScript(dpaFile);
 		}
 		catch (Exception unable) {
-			log.append("Unable to obtain the DicomPixelAnonymizer script\n");
+			Log.getInstance().append("Unable to obtain the DicomPixelAnonymizer script\n");
 		}
 		return pixelScript;
 	}
@@ -548,7 +594,7 @@ public class CTPClient extends JFrame implements ActionListener {
 			System.setProperty("javax.net.ssl.keyStorePassword", "ctpstore");
 		}
 		catch (Exception ex) {
-			log.append("Unable to install the keystore\n");
+			Log.getInstance().append("Unable to install the keystore\n");
 		}
 	}
 
@@ -598,12 +644,27 @@ public class CTPClient extends JFrame implements ActionListener {
 		return null;
 	}
 
-	private void listFiles(File dir) {
-		dp.add(new DirectoryCheckBox(dp));
-		dp.add(new DirectoryName(dir), RowLayout.span(4));
-		dp.add(RowLayout.crlf());
+	private void listFiles(File dir, ButtonGroup buttonGroup) {
+		StatusPane.getInstance().setText("Directory: "+dir);
+
 		File[] files = dir.listFiles(new FilesOnlyFilter());
-		for (File file : files) {
+		FileName[] fileNames = new FileName[files.length];
+		for (int i=0; i<files.length; i++) fileNames[i] = new FileName(files[i]);
+		Arrays.sort(fileNames);
+
+		FileName last = null;
+		for (FileName fileName : fileNames) {
+
+			if ((last == null) || !fileName.isSameStudy(last)) {
+				StudyCheckBox scb = new StudyCheckBox(dp);
+				dp.add(scb);
+				buttonGroup.add(scb);
+				dp.add(new StudyName(fileName), RowLayout.span(4));
+				dp.add(RowLayout.crlf());
+			}
+			last = fileName;
+
+			File file = fileName.getFile();
 			String name = file.getName().toLowerCase();
 			boolean dcm = name.endsWith(".dcm");
 			dcm |= name.startsWith("img");
@@ -613,11 +674,10 @@ public class CTPClient extends JFrame implements ActionListener {
 			dcm &= !name.endsWith(".jpeg");
 			dcm &= !name.endsWith(".png");
 
-			FileName fileName = new FileName(file);
 			FileSize fileSize = new FileSize(file);
 			StatusText statusText = new StatusText();
 			FileCheckBox cb = new FileCheckBox(fileName, statusText);
-			cb.setSelected(dcm);
+			cb.setSelected(false);
 
 			dp.add(cb);
 			dp.add(fileName);
@@ -629,7 +689,18 @@ public class CTPClient extends JFrame implements ActionListener {
 		dp.add(Box.createVerticalStrut(10));
 		dp.add(RowLayout.crlf());
 		files = dir.listFiles(new DirectoriesOnlyFilter());
-		for (File file : files) listFiles(file);
+		for (File file : files) listFiles(file, buttonGroup);
+	}
+
+	private void clickFirstStudy(ButtonGroup buttonGroup) {
+		Enumeration<AbstractButton> buttons = buttonGroup.getElements();
+		if (buttons.hasMoreElements()) {
+			AbstractButton button = buttons.nextElement();
+			if (button instanceof StudyCheckBox) {
+				StudyCheckBox scb = (StudyCheckBox)button;
+				scb.setCheckBoxes();
+			}
+		}
 	}
 
     class WindowCloser extends WindowAdapter {
@@ -654,13 +725,11 @@ public class CTPClient extends JFrame implements ActionListener {
 			idTable.save(parent);
 
 			//Offer to save the log if it isn't empty
-			log.save(parent);
+			Log.getInstance().save(parent);
 
-			//Done
-			if (scp != null) {
-				scp.stop();
-				JOptionPane.showMessageDialog(parent, "DICOM Storage SCP stopped.");
-			}
+			//Stop the SCP if it's running.
+			if (scp != null) scp.stop();
+
 			System.exit(0);
 		}
     }

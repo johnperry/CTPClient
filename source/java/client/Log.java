@@ -15,10 +15,16 @@ import org.rsna.util.FileUtil;
 
 public class Log {
 
-	StringBuffer log = new StringBuffer();
+	private static Log logInstance = null;
+	private StringBuffer log;
 
-	public Log() {
-		super();
+	public static Log getInstance() {
+		if (logInstance == null) logInstance = new Log();
+		return logInstance;
+	}
+
+	protected Log() {
+		log = new StringBuffer();
 	}
 
 	public void save(Component parent) {
@@ -38,7 +44,22 @@ public class Log {
 	}
 
 	public void append(String s) {
-		log.append(s);
+		if (SwingUtilities.isEventDispatchThread()) {
+			log.append(s);
+		}
+		else {
+			final String ss = s;
+			Runnable r = new Runnable() {
+				public void run() {
+					log.append(ss);
+				}
+			};
+			SwingUtilities.invokeLater(r);
+		}
+	}
+
+	public String getText() {
+		return log.toString();
 	}
 
 }

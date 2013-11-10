@@ -11,19 +11,19 @@ import java.awt.*;
 import java.io.*;
 import javax.swing.*;
 
-public class DirectoryName extends JLabel {
+public class StudyName extends JLabel {
 
-	File dir;
+	FileName fileName;
 
-	public DirectoryName(File dir) {
-		super(dir.getAbsolutePath());
-		this.dir = dir;
-		setFont( new Font( "Monospaced", Font.BOLD, 12 ) );
-		setForeground( Color.black );
+	public StudyName(FileName fileName) {
+		super( fileName.getPatientName()
+				+ " [" + fileName.getPatientID() + "] "
+				+ fileName.getDate()
+				+ " " + fileName.getModality() );
+		this.fileName = fileName;
+		setFont( new Font( "Monospaced", Font.BOLD, 16 ) );
+		setForeground( Color.blue );
 	}
 
-	public File getDirectory() {
-		return dir;
-	}
 }
 
