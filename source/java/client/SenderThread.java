@@ -11,21 +11,26 @@ import java.awt.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import org.rsna.server.*;
-import org.rsna.util.*;
 import org.rsna.ctp.objects.*;
+import org.rsna.ctp.pipeline.Status;
+import org.rsna.ctp.stdstages.anonymizer.AnonymizerStatus;
 import org.rsna.ctp.stdstages.anonymizer.dicom.DICOMAnonymizer;
 import org.rsna.ctp.stdstages.anonymizer.dicom.DICOMDecompressor;
 import org.rsna.ctp.stdstages.anonymizer.dicom.DICOMPixelAnonymizer;
 import org.rsna.ctp.stdstages.anonymizer.dicom.PixelScript;
-import org.rsna.ctp.stdstages.anonymizer.dicom.Signature;
 import org.rsna.ctp.stdstages.anonymizer.dicom.Regions;
-import org.rsna.ctp.stdstages.anonymizer.AnonymizerStatus;
+import org.rsna.ctp.stdstages.anonymizer.dicom.Signature;
+import org.rsna.ctp.stdstages.anonymizer.IntegerTable;
+import org.rsna.ctp.stdstages.dicom.DicomStorageSCU;
+import org.rsna.server.*;
+import org.rsna.util.*;
 
 public class SenderThread extends Thread {
 
-	String urlString;
+	String httpURLString;
+	String dicomURLString;
 	File exportDirectory = null;
+	boolean renameFiles = false;
 	DirectoryPanel dp;
 	CTPClient parent;
 	Properties daScriptProps;
@@ -37,10 +42,13 @@ public class SenderThread extends Thread {
 	boolean dfEnabled;
 	boolean dpaEnabled;
 	boolean setBurnedInAnnotation = false;
+	DicomStorageSCU scu = null;
+	IntegerTable integerTable = null;
 
     public SenderThread (CTPClient parent) {
 		super("SenderThread");
-		this.urlString = parent.getDestinationURL();
+		this.httpURLString = parent.getHttpURL();
+		this.dicomURLString = parent.getDicomURL();
 		this.dp = parent.getDirectoryPanel();
 		this.daScriptProps = parent.getDAScriptProps();
 		this.daLUTProps = parent.getDALUTProps();
@@ -52,6 +60,7 @@ public class SenderThread extends Thread {
 		this.dpaEnabled = parent.getDPAEnabled();
 		this.setBurnedInAnnotation = parent.getSetBurnedInAnnotation();
 		this.exportDirectory = parent.getExportDirectory();
+		this.renameFiles = parent.getRenameFiles();
 		this.parent = parent;
 	}
 
@@ -65,6 +74,13 @@ public class SenderThread extends Thread {
 				if (cb.isSelected()) cbs.add(cb);
 			}
 		}
+
+		if ((dicomURLString != null) && !dicomURLString.equals("") && (cbs.size() > 0)) {
+			scu = new DicomStorageSCU(dicomURLString, 0, false, 0, 0, 0, 0);
+		}
+
+		try { integerTable = new IntegerTable(new File(System.getProperty("user.dir"))); }
+		catch (Exception noIntegerTable) { }
 
 		int fileNumber = 0;
 		int nFiles = cbs.size();
@@ -85,7 +101,7 @@ public class SenderThread extends Thread {
 					if (acceptNonImageObjects || dob.isImage()) {
 
 						//Apply the filter if one is available
-						if (!dfEnabled || (dfScript == null) || dob.matches(dfScript).getResult()) {
+						if (!dfEnabled || (dfScript == null) || dob.matches(dfScript)) {
 
 							//Get the PHI PatientID for the IDTable
 							String phiPatientID = dob.getPatientID();
@@ -99,28 +115,33 @@ public class SenderThread extends Thread {
 							if (dob != null) {
 								String anonPatientID = dob.getPatientID();
 								idTable.put(phiPatientID, anonPatientID);
+								String status = "";
 
 								//Copy the file to the export directory, if so configured
 								boolean fileExportOK = true;
 								if (exportDirectory != null) {
-									exportDirectory.mkdirs();
-									String name = dob.getSOPInstanceUID();
-									File tempFile = new File(exportDirectory, name+".partial");
-									File savedFile = new File(exportDirectory, name+".dcm");
-									dob.setStandardExtension();
-									fileExportOK = dob.copyTo(tempFile) && tempFile.renameTo(savedFile);
+									fileExportOK = directoryExport(dob);
+									if (!fileExportOK) status = append(status, "File");
 								}
 
 								//Do the HTTP export, if so configured
 								boolean httpExportOK = true;
-								if ((urlString != null) && !urlString.equals("")) {
-									httpExportOK =  export(dob.getFile());
+								if ((httpURLString != null) && !httpURLString.equals("")) {
+									httpExportOK =  httpExport(dob.getFile());
+									if (!httpExportOK) status = append(status, "HTTP");
+								}
+
+								//Do the DICOM export, if so configured
+								boolean dicomExportOK = true;
+								if (scu != null) {
+									dicomExportOK =  dicomExport(dob);
+									if (!dicomExportOK) status = append(status, "DICOM");
 								}
 
 								//Count the complete successes
-								boolean ok = fileExportOK && httpExportOK;
+								boolean ok = fileExportOK && httpExportOK && dicomExportOK;
 								if (ok) successes++;
-								String status = ok ? "OK" : "FAILED";
+								status = ok ? "OK" : "FAILED: "+status;
 								fileStatus.setText(Color.black, "["+status+"]");
 								dob.getFile().delete();
 
@@ -139,13 +160,24 @@ public class SenderThread extends Thread {
 				fileStatus.setText(Color.red, "[FAILED]");
 				StringWriter sw = new StringWriter();
 				ex.printStackTrace(new PrintWriter(sw));
-				Log.getInstance().append("exportDirectory: "+exportDirectory+"\nurlString:"+urlString+"\n"+sw.toString());
+				Log.getInstance().append("exportDirectory: "+exportDirectory
+										+"\nhttpURL:"+httpURLString
+										+"\ndicomURL:"+dicomURLString
+										+"\n"+sw.toString());
 			}
 		}
+		if (scu != null) scu.close();
+		if (integerTable != null) integerTable.close();
 		statusPane.setText( "Processsing complete: "
 								+fileNumber+" files processed; "
-									+successes+" files successfully transmitted" );
+									+successes+" files successfully exported" );
 		parent.transmissionComplete();
+	}
+
+	String append(String status, String text) {
+		if (status.length() > 0) status += ";";
+		status += text;
+		return status;
 	}
 
 	private DicomObject anonymize(DicomObject dob, StatusText fileStatus) {
@@ -182,18 +214,22 @@ public class SenderThread extends Thread {
 			}
 
 			//Anonymize the rest of the dataset
+			if (daScriptProps == null) {
+				fileStatus.setText(Color.red, "[ABORTED (daScript)]");
+				return null;
+			}
 			AnonymizerStatus result =
 				DICOMAnonymizer.anonymize(temp, //input file
 										  temp, //output file
 										  daScriptProps,
 										  daLUTProps,
-										  null, //no IntegerTable in this application
+										  integerTable,
 										  false, //keep transfer syntax
 										  false); //do not rename to SOPInstanceUID
 			if (result.isOK()) {
 				try { dob = new DicomObject(temp); }
 				catch (Exception unable) {
-					fileStatus.setText(Color.red, "[REJECTED by DicomAnonymizer]");
+					fileStatus.setText(Color.red, "[REJECTED by DicomAnonymizer (parse)]");
 					return null;
 				}
 			}
@@ -209,11 +245,11 @@ public class SenderThread extends Thread {
 		}
 	}
 
-	private boolean export(File fileToExport) throws Exception {
+	private boolean httpExport(File fileToExport) throws Exception {
 		HttpURLConnection conn;
 		OutputStream svros;
 		//Establish the connection
-		conn = HttpUtil.getConnection(new URL(urlString));
+		conn = HttpUtil.getConnection(new URL(httpURLString));
 		conn.connect();
 		svros = conn.getOutputStream();
 
@@ -229,5 +265,31 @@ public class SenderThread extends Thread {
 		//result is for backward compatibility with MIRC.
 		String result = FileUtil.getText( conn.getInputStream() );
 		return result.equals("OK");
+	}
+
+	private boolean dicomExport(DicomObject dob) {
+		Status status = scu.send(dob.getFile()); //Use File because the stream was not open.
+		return status.equals(Status.OK);
+	}
+
+	private boolean directoryExport(DicomObject dob) {
+		File dir = exportDirectory;
+		String name = dob.getSOPInstanceUID();
+
+		if (renameFiles) {
+			String patientID = dob.getPatientID();
+			String study = DigestUtil.hash(dob.getStudyInstanceUID(), 6);
+			String series = dob.getSeriesNumber();
+			String acquisition = dob.getAcquisitionNumber();
+			String instance = dob.getInstanceNumber();
+			name = study+"_"+series+"_"+acquisition+"_"+instance;
+			dir = new File(dir, patientID);
+			dir = new File(dir, study);
+		}
+
+		dir.mkdirs();
+		File tempFile = new File(dir, name+".partial");
+		File savedFile = new File(dir, name+".dcm");
+		return dob.copyTo(tempFile) && tempFile.renameTo(savedFile);
 	}
 }

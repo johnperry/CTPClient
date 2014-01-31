@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------
-*  Copyright 2012 by the Radiological Society of North America
+*  Copyright 2013 by the Radiological Society of North America
 *
 *  This source software is released under the terms of the
 *  RSNA Public License (http://mirc.rsna.org/rsnapubliclicense)
@@ -15,6 +15,7 @@ public class StatusPane extends JPanel {
 
 	static StatusPane pane = null;
 	JLabel status;
+	boolean hasRightComponents = false;
 
     public static StatusPane getInstance() {
 		return pane;
@@ -27,14 +28,15 @@ public class StatusPane extends JPanel {
 
 	protected StatusPane(String s, Color c) {
 		super();
-		setLayout(new FlowLayout(FlowLayout.LEFT));
+		setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
 		Border lowered = BorderFactory.createLoweredBevelBorder();
 		Border empty = BorderFactory.createEmptyBorder(1,1,1,1);
 		Border compound = BorderFactory.createCompoundBorder(lowered, empty);
 		setBorder(compound);
 		setBackground(c);
 		status = new JLabel(s);
-		this.add(status);
+		add(status);
+		add(Box.createHorizontalGlue());
 	}
 
 	public void setText(String s) {
@@ -50,5 +52,11 @@ public class StatusPane extends JPanel {
 			};
 			SwingUtilities.invokeLater(display);
 		}
+	}
+
+	public void addRightComponent(Component component) {
+		if (hasRightComponents) add(Box.createHorizontalStrut(5));
+		add(component);
+		hasRightComponents = true;
 	}
 }

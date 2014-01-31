@@ -38,14 +38,14 @@ public class FileName extends JPanel implements Comparable<FileName> {
 		add(RowLayout.crlf());
 		try {
 			DicomObject dob = new DicomObject(file);
-			patientName = dob.getPatientName();
-			patientID = dob.getPatientID();
-			siUID = dob.getStudyInstanceUID();
-			modality = dob.getModality();
-			studyDate = dob.getStudyDate();
-			String seriesNumber = dob.getSeriesNumber();
-			String acquisitionNumber = dob.getAcquisitionNumber();
-			String instanceNumber = dob.getInstanceNumber();
+			patientName = fixNull(dob.getPatientName());
+			patientID = fixNull(dob.getPatientID());
+			siUID = fixNull(dob.getStudyInstanceUID());
+			modality = fixNull(dob.getModality());
+			studyDate = fixDate(dob.getStudyDate());
+			String seriesNumber = fixNull(dob.getSeriesNumber());
+			String acquisitionNumber = fixNull(dob.getAcquisitionNumber());
+			String instanceNumber = fixNull(dob.getInstanceNumber());
 			seriesNumberInt = StringUtil.getInt(seriesNumber);
 			acquisitionNumberInt = StringUtil.getInt(acquisitionNumber);
 			instanceNumberInt = StringUtil.getInt(instanceNumber);
@@ -56,11 +56,15 @@ public class FileName extends JPanel implements Comparable<FileName> {
 				s += getText("Acquisition:", acquisitionNumber, " ");
 				s += getText("Image:", instanceNumber, "");
 			}
-			else s += dob.getSOPClassName();
+			else s += fixNull(dob.getSOPClassName());
 			add(new JLabel(s));
 			add(RowLayout.crlf());
 		}
 		catch (Exception nonDICOM) { }
+	}
+
+	private String fixNull(String s) {
+		return (s == null) ? "" : s;
 	}
 
 	public File getFile() {
@@ -76,7 +80,7 @@ public class FileName extends JPanel implements Comparable<FileName> {
 	}
 
 	public String getDate() {
-		return fixDate(studyDate);
+		return studyDate;
 	}
 
 	public String getModality() {
@@ -84,6 +88,7 @@ public class FileName extends JPanel implements Comparable<FileName> {
 	}
 
 	private String fixDate(String s) {
+		if (s == null) s = "";
 		if (s.length() == 8) {
 			s = s.substring(0,4) + "." + s.substring(4,6) + "." + s.substring(6);
 		}
@@ -96,6 +101,7 @@ public class FileName extends JPanel implements Comparable<FileName> {
 	}
 
 	public int compareTo(FileName fn) {
+		if (fn == null)  return 0;
 		int c;
 		if ( (c = this.patientID.compareTo(fn.patientID)) != 0 ) return c;
 		if ( (c = this.studyDate.compareTo(fn.studyDate)) != 0 ) return c;
@@ -107,10 +113,12 @@ public class FileName extends JPanel implements Comparable<FileName> {
  	}
 
  	public boolean isSamePatient(FileName fn) {
+		if (fn == null) return false;
 		return (this.patientID.equals(fn.patientID));
 	}
 
 	public boolean isSameStudy(FileName fn) {
+		if (fn == null) return false;
 		return isSamePatient(fn) && (this.siUID.equals(fn.siUID));
 	}
 

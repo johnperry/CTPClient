@@ -12,10 +12,26 @@ import java.io.FileFilter;
 
 class FilesOnlyFilter implements FileFilter {
 
-	public FilesOnlyFilter() { };
+	boolean dcmOnly = false;
+
+	public FilesOnlyFilter() { this(false); }
+
+	public FilesOnlyFilter(boolean dcmOnly) {
+		this.dcmOnly = dcmOnly;
+	}
 
 	public boolean accept(File file) {
-		return file.isFile();
+		if (!file.isFile()) return false;
+		if (!dcmOnly) return true;
+		String name = file.getName().toLowerCase();
+		boolean dcm = name.endsWith(".dcm");
+		dcm |= name.startsWith("img");
+		dcm |= name.startsWith("image");
+		dcm |= name.matches("[0-9\\.]+");
+		dcm &= !name.endsWith(".jpg");
+		dcm &= !name.endsWith(".jpeg");
+		dcm &= !name.endsWith(".png");
+		return dcm;
 	}
 
 }
