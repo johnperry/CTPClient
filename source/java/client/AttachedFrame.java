@@ -16,7 +16,6 @@ import org.rsna.util.FileUtil;
 
 public class AttachedFrame extends JFrame {
 
-	Component parent;
 	int width;
 	JEditorPane editorPane;
 
@@ -51,10 +50,6 @@ public class AttachedFrame extends JFrame {
 	public void setText(String text) {
 		editorPane.setText(text);
 		editorPane.setCaretPosition(0);
-	}
-
-	public void attachTo() {
-		attachTo(parent);
 	}
 
 	public void attachTo(Component component) {
