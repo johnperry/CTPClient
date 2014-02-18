@@ -696,7 +696,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 	private void listFiles(File dir, ButtonGroup buttonGroup) {
 		StatusPane.getInstance().setText("Directory: "+dir);
 		boolean anio = getAcceptNonImageObjects();
-		File[] files = dir.listFiles(new FilesOnlyFilter(true, !anio)); //true:DICOM files only; !anio:images only
+		File[] files = dir.listFiles(new FilesOnlyFilter());
 		if (files.length > 0) {
 			FileName[] fileNames = new FileName[files.length];
 			for (int i=0; i<files.length; i++) fileNames[i] = new FileName(files[i]);
@@ -704,28 +704,30 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 			FileName last = null;
 			for (FileName fileName : fileNames) {
+				if (fileName.isDICOM() && (anio || fileName.isImage())) {
 
-				if ((last == null) || !fileName.isSameStudy(last)) {
-					StudyCheckBox scb = new StudyCheckBox(dp);
-					dp.add(scb);
-					buttonGroup.add(scb);
-					dp.add(new StudyName(fileName), RowLayout.span(4));
+					if ((last == null) || !fileName.isSameStudy(last)) {
+						StudyCheckBox scb = new StudyCheckBox(dp);
+						dp.add(scb);
+						buttonGroup.add(scb);
+						dp.add(new StudyName(fileName), RowLayout.span(4));
+						dp.add(RowLayout.crlf());
+					}
+					last = fileName;
+
+					File file = fileName.getFile();
+					FileSize fileSize = new FileSize(file);
+					StatusText statusText = new StatusText();
+					FileCheckBox cb = new FileCheckBox(fileName, statusText);
+					cb.setSelected(false);
+
+					dp.add(cb);
+					dp.add(fileName);
+					dp.add(Box.createHorizontalStrut(20));
+					dp.add(fileSize);
+					dp.add(statusText);
 					dp.add(RowLayout.crlf());
 				}
-				last = fileName;
-
-				File file = fileName.getFile();
-				FileSize fileSize = new FileSize(file);
-				StatusText statusText = new StatusText();
-				FileCheckBox cb = new FileCheckBox(fileName, statusText);
-				cb.setSelected(false);
-
-				dp.add(cb);
-				dp.add(fileName);
-				dp.add(Box.createHorizontalStrut(20));
-				dp.add(fileSize);
-				dp.add(statusText);
-				dp.add(RowLayout.crlf());
 			}
 			dp.add(Box.createVerticalStrut(10));
 			dp.add(RowLayout.crlf());

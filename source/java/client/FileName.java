@@ -25,6 +25,8 @@ public class FileName extends JPanel implements Comparable<FileName> {
 	int seriesNumberInt = 0;
 	int acquisitionNumberInt = 0;
 	int instanceNumberInt = 0;
+	boolean isDICOM = false;
+	boolean isImage = false;
 
 	public FileName(File file) {
 		super();
@@ -38,6 +40,8 @@ public class FileName extends JPanel implements Comparable<FileName> {
 		add(RowLayout.crlf());
 		try {
 			DicomObject dob = new DicomObject(file);
+			isDICOM = true;
+			isImage = dob.isImage();
 			patientName = fixNull(dob.getPatientName());
 			patientID = fixNull(dob.getPatientID());
 			siUID = fixNull(dob.getStudyInstanceUID());
@@ -51,7 +55,7 @@ public class FileName extends JPanel implements Comparable<FileName> {
 			instanceNumberInt = StringUtil.getInt(instanceNumber);
 
 			String s = "";
-			if (dob.isImage()) {
+			if (isImage) {
 				s += getText("Series:", seriesNumber, " ");
 				s += getText("Acquisition:", acquisitionNumber, " ");
 				s += getText("Image:", instanceNumber, "");
@@ -122,5 +126,12 @@ public class FileName extends JPanel implements Comparable<FileName> {
 		return isSamePatient(fn) && (this.siUID.equals(fn.siUID));
 	}
 
+	public boolean isDICOM() {
+		return isDICOM;
+	}
+
+	public boolean isImage() {
+		return isImage;
+	}
 }
 

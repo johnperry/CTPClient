@@ -13,26 +13,10 @@ import org.rsna.ctp.objects.DicomObject;
 
 class FilesOnlyFilter implements FileFilter {
 
-	boolean dicomOnly = false;
-	boolean imagesOnly = false;
-
-	public FilesOnlyFilter() { this(false, false); }
-
-	public FilesOnlyFilter(boolean dicomOnly, boolean imagesOnly) {
-		this.dicomOnly = dicomOnly;
-		this.imagesOnly = imagesOnly;
-	}
+	public FilesOnlyFilter() { }
 
 	public boolean accept(File file) {
-		if (!file.isFile()) return false;
-		if (!dicomOnly) return true;
-		try {
-			DicomObject dob = new DicomObject(file);
-			if (!imagesOnly) return true;
-			else return dob.isImage();
-		}
-		catch (Exception notDicom) { }
-		return false;
+		return file.isFile();
 	}
 }
 
