@@ -25,6 +25,8 @@
             <jar href="CTPClient.jar"/>
             <jar href="CTP.jar"/>
             <jar href="dcm4che.jar"/>
+            <jar href="dcm4che-imageio-rle-2.0.25.jar"/>
+            <jar href="jdbm.jar"/>
             <jar href="log4j.jar"/>
             <jar href="util.jar"/>
         </resources>

@@ -695,7 +695,8 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 	private void listFiles(File dir, ButtonGroup buttonGroup) {
 		StatusPane.getInstance().setText("Directory: "+dir);
-		File[] files = dir.listFiles(new FilesOnlyFilter(true)); //DICOM files only
+		boolean anio = getAcceptNonImageObjects();
+		File[] files = dir.listFiles(new FilesOnlyFilter(true, !anio)); //true:DICOM files only; !anio:images only
 		if (files.length > 0) {
 			FileName[] fileNames = new FileName[files.length];
 			for (int i=0; i<files.length; i++) fileNames[i] = new FileName(files[i]);

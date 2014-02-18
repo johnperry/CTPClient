@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------
-*  Copyright 2005 by the Radiological Society of North America
+*  Copyright 2014 by the Radiological Society of North America
 *
 *  This source software is released under the terms of the
 *  RSNA Public License (http://mirc.rsna.org/rsnapubliclicense)
@@ -9,30 +9,30 @@ package client;
 
 import java.io.File;
 import java.io.FileFilter;
+import org.rsna.ctp.objects.DicomObject;
 
 class FilesOnlyFilter implements FileFilter {
 
-	boolean dcmOnly = false;
+	boolean dicomOnly = false;
+	boolean imagesOnly = false;
 
-	public FilesOnlyFilter() { this(false); }
+	public FilesOnlyFilter() { this(false, false); }
 
-	public FilesOnlyFilter(boolean dcmOnly) {
-		this.dcmOnly = dcmOnly;
+	public FilesOnlyFilter(boolean dicomOnly, boolean imagesOnly) {
+		this.dicomOnly = dicomOnly;
+		this.imagesOnly = imagesOnly;
 	}
 
 	public boolean accept(File file) {
 		if (!file.isFile()) return false;
-		if (!dcmOnly) return true;
-		String name = file.getName().toLowerCase();
-		boolean dcm = name.endsWith(".dcm");
-		dcm |= name.startsWith("img");
-		dcm |= name.startsWith("image");
-		dcm |= name.matches("[0-9\\.]+");
-		dcm &= !name.endsWith(".jpg");
-		dcm &= !name.endsWith(".jpeg");
-		dcm &= !name.endsWith(".png");
-		return dcm;
+		if (!dicomOnly) return true;
+		try {
+			DicomObject dob = new DicomObject(file);
+			if (!imagesOnly) return true;
+			else return dob.isImage();
+		}
+		catch (Exception notDicom) { }
+		return false;
 	}
-
 }
 

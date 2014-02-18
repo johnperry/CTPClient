@@ -72,6 +72,9 @@
 				<attribute name="Main-Class" value="client.CTPClient"/>
 				<attribute name="Implementation-Version" value="${today} @ ${now}"/>
 				<attribute name="Class-Path" value="util.jar log4j.jar dcm4che.jar dcm4che-imageio-rle-2.0.25.jar CTP.jar jdbm.jar"/>
+				<attribute name="Application-Name" value="CTP Client"/>
+				<attribute name="Permissions" value="all-permissions"/>
+				<attribute name="Codebase" value="*"/>
 			</manifest>
 			<fileset dir="${build}" includes="**"/>
 		</jar>
