@@ -16,7 +16,7 @@ public class FileCheckBox extends JCheckBox {
 	FileName fileName;
 	StatusText statusText;
 
-	public FileCheckBox(FileName fileName, StatusText statusText) {
+	public FileCheckBox() {
 		super();
 		this.fileName = fileName;
 		this.statusText = statusText;
@@ -26,13 +26,6 @@ public class FileCheckBox extends JCheckBox {
 		setAlignmentY(0.0f);
 	}
 
-	public FileName getFileNameObject() {
-		return fileName;
-	}
-
-	public StatusText getStatusTextObject() {
-		return statusText;
-	}
 }
 
 

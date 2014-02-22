@@ -14,9 +14,10 @@ import org.rsna.ctp.objects.DicomObject;
 import org.rsna.ui.RowLayout;
 import org.rsna.util.StringUtil;
 
-public class FileName extends JPanel implements Comparable<FileName> {
+public class FileName implements Comparable<FileName> {
 
 	File file;
+	FileSize fileSize;
 	String patientName = "";
 	String patientID = "";
 	String siUID = "";
@@ -27,17 +28,15 @@ public class FileName extends JPanel implements Comparable<FileName> {
 	int instanceNumberInt = 0;
 	boolean isDICOM = false;
 	boolean isImage = false;
+	FileCheckBox cb = null;
+	StatusText statusText = null;
+	String description = "";
 
 	public FileName(File file) {
-		super();
 		this.file = file;
-		setLayout(new RowLayout(0, 0));
-		setBackground(Color.white);
-		JLabel fileName = new JLabel(file.getName());
-		fileName.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
-		fileName.setForeground( Color.BLACK );
-		add(fileName);
-		add(RowLayout.crlf());
+		cb = new FileCheckBox();
+		statusText = new StatusText();
+		fileSize = new FileSize(file);
 		try {
 			DicomObject dob = new DicomObject(file);
 			isDICOM = true;
@@ -53,16 +52,12 @@ public class FileName extends JPanel implements Comparable<FileName> {
 			seriesNumberInt = StringUtil.getInt(seriesNumber);
 			acquisitionNumberInt = StringUtil.getInt(acquisitionNumber);
 			instanceNumberInt = StringUtil.getInt(instanceNumber);
-
-			String s = "";
 			if (isImage) {
-				s += getText("Series:", seriesNumber, " ");
-				s += getText("Acquisition:", acquisitionNumber, " ");
-				s += getText("Image:", instanceNumber, "");
+				description += getText("Series:", seriesNumber, " ");
+				description += getText("Acquisition:", acquisitionNumber, " ");
+				description += getText("Image:", instanceNumber, "");
 			}
-			else s += fixNull(dob.getSOPClassName());
-			add(new JLabel(s));
-			add(RowLayout.crlf());
+			else description += fixNull(dob.getSOPClassName());
 		}
 		catch (Exception nonDICOM) { }
 	}
@@ -133,5 +128,41 @@ public class FileName extends JPanel implements Comparable<FileName> {
 	public boolean isImage() {
 		return isImage;
 	}
-}
 
+	public void setSelected(boolean selected) {
+		cb.setSelected(selected);
+	}
+
+	public boolean isSelected() {
+		return cb.isSelected();
+	}
+
+	public StatusText getStatusText() {
+		return statusText;
+	}
+
+	public FileCheckBox getCheckBox() {
+		return cb;
+	}
+
+	public void display(DirectoryPanel dp) {
+		JPanel panel = new JPanel();
+		panel.setLayout(new RowLayout(0, 0));
+		panel.setBackground(Color.white);
+		JLabel name = new JLabel(file.getName());
+		name.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
+		name.setForeground( Color.BLACK );
+		panel.add(name);
+		panel.add(RowLayout.crlf());
+		panel.add(new JLabel(description));
+		panel.add(RowLayout.crlf());
+
+		dp.add(cb);
+		dp.add(panel);
+		dp.add(Box.createHorizontalStrut(20));
+		dp.add(fileSize);
+		dp.add(statusText);
+		dp.add(RowLayout.crlf());
+	}
+
+}

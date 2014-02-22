@@ -27,6 +27,7 @@ import org.rsna.util.*;
 
 public class SenderThread extends Thread {
 
+	StudyList studyList;
 	String httpURLString;
 	String dicomURLString;
 	File exportDirectory = null;
@@ -47,6 +48,7 @@ public class SenderThread extends Thread {
 
     public SenderThread (CTPClient parent) {
 		super("SenderThread");
+		this.studyList = parent.getStudyList();
 		this.httpURLString = parent.getHttpURL();
 		this.dicomURLString = parent.getDicomURL();
 		this.dp = parent.getDirectoryPanel();
@@ -66,16 +68,19 @@ public class SenderThread extends Thread {
 
 	public void run() {
 		StatusPane statusPane = StatusPane.getInstance();
-		Component[] components = dp.getComponents();
-		LinkedList<FileCheckBox> cbs = new LinkedList<FileCheckBox>();
-		for (int i=0; i<components.length; i++) {
-			if (components[i] instanceof FileCheckBox) {
-				FileCheckBox cb = (FileCheckBox)components[i];
-				if (cb.isSelected()) cbs.add(cb);
+
+		LinkedList<FileName> fileNames = new LinkedList<FileName>();
+		Study[] studies = studyList.getStudies();
+		for (Study study : studies) {
+			if (study.isSelected()) {
+				FileName[] names = study.getFileNames();
+				for (FileName name : names) {
+					if (name.isSelected()) fileNames.add(name);
+				}
 			}
 		}
 
-		if ((dicomURLString != null) && !dicomURLString.equals("") && (cbs.size() > 0)) {
+		if ((dicomURLString != null) && !dicomURLString.equals("") && (fileNames.size() > 0)) {
 			scu = new DicomStorageSCU(dicomURLString, 0, false, 0, 0, 0, 0);
 		}
 
@@ -83,11 +88,11 @@ public class SenderThread extends Thread {
 		catch (Exception noIntegerTable) { }
 
 		int fileNumber = 0;
-		int nFiles = cbs.size();
+		int nFiles = fileNames.size();
 		int successes = 0;
-		for (FileCheckBox cb : cbs) {
-			File file = cb.getFileNameObject().getFile();
-			StatusText fileStatus = cb.getStatusTextObject();
+		for (FileName fn : fileNames) {
+			File file = fn.getFile();
+			StatusText fileStatus = fn.getStatusText();
 
 			statusPane.setText( "Sending "+ (++fileNumber) + "/" + nFiles + " (" + file.getName() + ")");
 
@@ -140,13 +145,16 @@ public class SenderThread extends Thread {
 
 								//Count the complete successes
 								boolean ok = fileExportOK && httpExportOK && dicomExportOK;
-								if (ok) successes++;
+								if (ok) {
+									successes++;
+									fn.setSelected(false);
+								}
 								status = ok ? "OK" : "FAILED: "+status;
 								fileStatus.setText(Color.black, "["+status+"]");
 								dob.getFile().delete();
 
 								//If we are configured to delete from the original directory, do it.
-								if (ok && dp.deleteOnSuccess()) file.delete();
+								if (ok && dp.getDeleteOnSuccess()) file.delete();
 							}
 						}
 						else fileStatus.setText(Color.blue, "[REJECTED by DicomFilter]");
@@ -168,10 +176,15 @@ public class SenderThread extends Thread {
 		}
 		if (scu != null) scu.close();
 		if (integerTable != null) integerTable.close();
-		statusPane.setText( "Processsing complete: "
-								+fileNumber+" files processed; "
-									+successes+" files successfully exported" );
+		String resultText = "Processsing complete: ";
+		resultText += fileNumber+" file"+plural(fileNumber)+" processed";
+		if (fileNumber > 0) resultText += "; "+successes+" file"+plural(fileNumber)+" successfully exported";
+		statusPane.setText(resultText);
 		parent.transmissionComplete();
+	}
+
+	String plural(int n) {
+		return (n != 1) ? "s" : "";
 	}
 
 	String append(String status, String text) {

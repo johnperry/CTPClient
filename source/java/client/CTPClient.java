@@ -87,6 +87,8 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
     File exportDirectory = null;
     boolean renameFiles = false;
 
+    StudyList studyList = null;
+
     String dicomURL = null;
 
     public static void main(String[] args) {
@@ -296,18 +298,18 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 	//.Implement the ActionListener interface
 	public void actionPerformed(ActionEvent event) {
+		boolean hasDialog = (dialog != null);
+		boolean anio = getAcceptNonImageObjects();
 		Object source = event.getSource();
 		if (source.equals(browseButton)) {
 			dir = getDirectory();
 			if (dir != null) {
 				dp.clear();
 				dp.setDeleteOnSuccess(false);
-				ButtonGroup buttonGroup = new ButtonGroup();
-				listFiles(dir, buttonGroup);
-				clickFirstStudy(buttonGroup);
+				studyList = new StudyList(dir, hasDialog, anio);
+				studyList.display(dp);
+				studyList.selectFirstStudy();
 				startButton.setEnabled(true);
-				invalidate();
-				validate();
 				sp.getVerticalScrollBar().setValue(0);
 			}
 			else startButton.setEnabled(false);
@@ -316,12 +318,10 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 			if (scpDirectory != null) {
 				dp.clear();
 				dp.setDeleteOnSuccess(true);
-				ButtonGroup buttonGroup = new ButtonGroup();
-				listFiles(scpDirectory, buttonGroup);
-				clickFirstStudy(buttonGroup);
+				studyList = new StudyList(scpDirectory, hasDialog, anio);
+				studyList.display(dp);
+				studyList.selectFirstStudy();
 				startButton.setEnabled(true);
-				invalidate();
-				validate();
 				sp.getVerticalScrollBar().setValue(0);
 			}
 		}
@@ -356,7 +356,9 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 	}
 
 	private void showLog() {
-		JOptionPane.showMessageDialog(this, Log.getInstance().getText(), "Log", JOptionPane.PLAIN_MESSAGE);
+		String text = Log.getInstance().getText().trim();
+		if (text.equals("")) text = "The log is empty.";
+		JOptionPane.showMessageDialog(this, text, "Log", JOptionPane.PLAIN_MESSAGE);
 	}
 
 	//Implement the ComponentListener interface
@@ -432,6 +434,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 				scpButton.setEnabled(true);
 				browseButton.setEnabled(true);
 				dialogButton.setEnabled(true);
+				startButton.setEnabled(true);
 			}
 		};
 		SwingUtilities.invokeLater(enable);
@@ -455,6 +458,10 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 	public DirectoryPanel getDirectoryPanel() {
 		return dp;
+	}
+
+	public StudyList getStudyList() {
+		return studyList;
 	}
 
 	public Properties getDAScriptProps() {
@@ -691,60 +698,6 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 			if ((dir != null) && dir.exists()) return dir;
 		}
 		return null;
-	}
-
-	private void listFiles(File dir, ButtonGroup buttonGroup) {
-		StatusPane.getInstance().setText("Directory: "+dir);
-		boolean anio = getAcceptNonImageObjects();
-		File[] files = dir.listFiles(new FilesOnlyFilter());
-		if (files.length > 0) {
-			FileName[] fileNames = new FileName[files.length];
-			for (int i=0; i<files.length; i++) fileNames[i] = new FileName(files[i]);
-			Arrays.sort(fileNames);
-
-			FileName last = null;
-			for (FileName fileName : fileNames) {
-				if (fileName.isDICOM() && (anio || fileName.isImage())) {
-
-					if ((last == null) || !fileName.isSameStudy(last)) {
-						StudyCheckBox scb = new StudyCheckBox(dp);
-						dp.add(scb);
-						buttonGroup.add(scb);
-						dp.add(new StudyName(fileName), RowLayout.span(4));
-						dp.add(RowLayout.crlf());
-					}
-					last = fileName;
-
-					File file = fileName.getFile();
-					FileSize fileSize = new FileSize(file);
-					StatusText statusText = new StatusText();
-					FileCheckBox cb = new FileCheckBox(fileName, statusText);
-					cb.setSelected(false);
-
-					dp.add(cb);
-					dp.add(fileName);
-					dp.add(Box.createHorizontalStrut(20));
-					dp.add(fileSize);
-					dp.add(statusText);
-					dp.add(RowLayout.crlf());
-				}
-			}
-			dp.add(Box.createVerticalStrut(10));
-			dp.add(RowLayout.crlf());
-		}
-		files = dir.listFiles(new DirectoriesOnlyFilter());
-		for (File file : files) listFiles(file, buttonGroup);
-	}
-
-	private void clickFirstStudy(ButtonGroup buttonGroup) {
-		Enumeration<AbstractButton> buttons = buttonGroup.getElements();
-		if (buttons.hasMoreElements()) {
-			AbstractButton button = buttons.nextElement();
-			if (button instanceof StudyCheckBox) {
-				StudyCheckBox scb = (StudyCheckBox)button;
-				scb.setCheckBoxes();
-			}
-		}
 	}
 
     class WindowCloser extends WindowAdapter {

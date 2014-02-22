@@ -17,6 +17,7 @@ public class StatusText extends JLabel {
 		super();
 		setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
 		setForeground( Color.BLACK );
+		setAlignmentY(0.0f);
 	}
 
 	public void setText(Color c, String s) {

@@ -24,13 +24,16 @@ public class DirectoryPanel extends JPanel {
 
 	public void clear() {
 		removeAll();
+		invalidate();
+		validate();
+		repaint();
 	}
 
 	public void setDeleteOnSuccess(boolean delete) {
 		deleteOnSuccess = delete;
 	}
 
-	public boolean deleteOnSuccess() {
+	public boolean getDeleteOnSuccess() {
 		return deleteOnSuccess;
 	}
 }
