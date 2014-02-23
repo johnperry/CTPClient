@@ -308,7 +308,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 				dp.setDeleteOnSuccess(false);
 				studyList = new StudyList(dir, hasDialog, anio);
 				studyList.display(dp);
-				studyList.selectFirstStudy();
+				//studyList.selectFirstStudy();
 				startButton.setEnabled(true);
 				sp.getVerticalScrollBar().setValue(0);
 			}
@@ -320,7 +320,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 				dp.setDeleteOnSuccess(true);
 				studyList = new StudyList(scpDirectory, hasDialog, anio);
 				studyList.display(dp);
-				studyList.selectFirstStudy();
+				//studyList.selectFirstStudy();
 				startButton.setEnabled(true);
 				sp.getVerticalScrollBar().setValue(0);
 			}
