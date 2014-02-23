@@ -11,7 +11,7 @@ import java.awt.*;
 import java.io.*;
 import javax.swing.*;
 
-public class StudyName extends JLabel {
+public class StudyName extends JButton {
 
 	FileName fileName;
 
@@ -23,6 +23,11 @@ public class StudyName extends JLabel {
 		this.fileName = fileName;
 		setFont( new Font( "Monospaced", Font.BOLD, 16 ) );
 		setForeground( Color.blue );
+		setBorder(BorderFactory.createEmptyBorder());
+		setBorderPainted(false);
+		setMargin(new Insets(0, 0, 0, 0));
+		setContentAreaFilled(false);
+		setFocusPainted(false);
 	}
 
 }

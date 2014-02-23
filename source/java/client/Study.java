@@ -25,6 +25,7 @@ public class Study implements ActionListener {
 		cb = new StudyCheckBox();
 		cb.addActionListener(this);
 		studyName = new StudyName(fileName);
+		studyName.addActionListener(this);
 		add(fileName);
 	}
 
@@ -34,25 +35,21 @@ public class Study implements ActionListener {
 	}
 
 	public void actionPerformed(ActionEvent event) {
-		JCheckBox cbox = (JCheckBox)event.getSource();
-		if (cb.equals(cbox)) {
+		Object source = event.getSource();
+		if (source.equals(cb)) {
 			if (cb.isSelected()) selectAll();
-			else deselectAll();
-		}
-		else {
-			if (!cb.isSelected()) cbox.setSelected(false);
-		}
-	}
+			else {
+				deselectAll();
+				DirectoryPanel dp = getDirectoryPanel();
+				if (dp != null) {
+					boolean ctrl = (event.getModifiers() & ActionEvent.CTRL_MASK) != 0;
+					if (ctrl) dp.setRowVisible(cb, false);
+				}
+			}
 
-	public void selectAll() {
-		for (FileName fn : list) {
-			fn.setSelected(true);
 		}
-	}
-
-	public void deselectAll() {
-		for (FileName fn : list) {
-			fn.setSelected(false);
+		else if (source.equals(studyName)) {
+			cb.doClick();
 		}
 	}
 
@@ -68,6 +65,30 @@ public class Study implements ActionListener {
 		cb.setSelected(selected);
 		if (selected) selectAll();
 		else deselectAll();
+	}
+
+	public void selectAll() {
+		DirectoryPanel dp = getDirectoryPanel();
+		for (FileName fn : list) {
+			fn.setSelected(true);
+			if (dp != null) dp.setRowVisible(fn.getCheckBox(), true);
+		}
+	}
+
+	public void deselectAll() {
+		DirectoryPanel dp = getDirectoryPanel();
+		for (FileName fn : list) {
+			fn.setSelected(false);
+			if (dp != null) dp.setRowVisible(fn.getCheckBox(), false);
+		}
+	}
+
+	private DirectoryPanel getDirectoryPanel() {
+		Component container = cb.getParent();
+		if ((container != null) && (container instanceof DirectoryPanel)) {
+			return (DirectoryPanel)container;
+		}
+		return null;
 	}
 
 	public String getName() {
@@ -87,8 +108,6 @@ public class Study implements ActionListener {
 		for (FileName fn : list) {
 			fn.display(dp);
 		}
-		dp.add(Box.createVerticalStrut(10));
-		dp.add(RowLayout.crlf());
 	}
 
 }

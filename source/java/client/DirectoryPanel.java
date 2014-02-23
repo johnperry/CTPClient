@@ -14,12 +14,16 @@ import org.rsna.ui.RowLayout;
 
 public class DirectoryPanel extends JPanel {
 
+	RowLayout layout;
 	boolean deleteOnSuccess = false;
 
 	public DirectoryPanel() {
 		super();
-		setLayout(new RowLayout());
+		layout = new RowLayout();
+		setLayout(layout);
 		setBackground(Color.WHITE);
+		setBorder(BorderFactory.createEmptyBorder());
+		setAlignmentX(0.0f);
 	}
 
 	public void clear() {
@@ -36,4 +40,9 @@ public class DirectoryPanel extends JPanel {
 	public boolean getDeleteOnSuccess() {
 		return deleteOnSuccess;
 	}
+
+	public void setRowVisible(Component startingComponent, boolean visibility) {
+		layout.setRowVisible(this, startingComponent, visibility);
+	}
+
 }
