@@ -46,7 +46,6 @@ public class Study implements ActionListener {
 					if (ctrl) dp.setRowVisible(cb, false);
 				}
 			}
-
 		}
 		else if (source.equals(studyName)) {
 			cb.doClick();
