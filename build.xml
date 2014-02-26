@@ -9,6 +9,7 @@
 	<property name="java" value="${source}/java"/>
 	<property name="products" value="${basedir}/products"/>
 	<property name="ctp" value="../CTP"/>
+	<property name="examples" value="${ctp}/source/files/examples"/>
 
 	<property name="zip" value="${basedir}/zip"/>
 
@@ -41,6 +42,15 @@
 		<mkdir dir="${products}"/>
 	</target>
 
+	<target name="getScripts">
+		<copy overwrite="true"
+			file="${examples}/example-ctp-dicom-anonymizer.script"
+			tofile="${files}/DA.script"/>
+		<copy overwrite="true"
+			file="${examples}/example-dicom-pixel-anonymizer.script"
+			tofile="${files}/DPA.script"/>
+	</target>
+
 	<target name="getLibraryJars">
 		<copy overwrite="true" todir="${libraries}">
 			<fileset dir="${ctp}/libraries">
@@ -54,7 +64,7 @@
 		</copy>
 	</target>
 
-	<target name="jar" depends="init, getLibraryJars">
+	<target name="jar" depends="init, getScripts, getLibraryJars">
 
 		<javac destdir="${build}" optimize="on"
 				classpathref="classpath"
