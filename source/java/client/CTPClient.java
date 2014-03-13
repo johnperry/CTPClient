@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------
-*  Copyright 2013 by the Radiological Society of North America
+*  Copyright 2014 by the Radiological Society of North America
 *
 *  This source software is released under the terms of the
 *  RSNA Public License (http://mirc.rsna.org/rsnapubliclicense)
@@ -298,7 +298,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 	//.Implement the ActionListener interface
 	public void actionPerformed(ActionEvent event) {
-		boolean hasDialog = (dialog != null);
+		boolean radioMode = (dialog != null) && dialog.studyMode();
 		boolean anio = getAcceptNonImageObjects();
 		Object source = event.getSource();
 		if (source.equals(browseButton)) {
@@ -306,7 +306,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 			if (dir != null) {
 				dp.clear();
 				dp.setDeleteOnSuccess(false);
-				studyList = new StudyList(dir, hasDialog, anio);
+				studyList = new StudyList(dir, radioMode, anio);
 				studyList.display(dp);
 				studyList.deselectAll();
 				startButton.setEnabled(true);
@@ -318,7 +318,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 			if (scpDirectory != null) {
 				dp.clear();
 				dp.setDeleteOnSuccess(true);
-				studyList = new StudyList(scpDirectory, hasDialog, anio);
+				studyList = new StudyList(scpDirectory, radioMode, anio);
 				studyList.display(dp);
 				studyList.deselectAll();
 				startButton.setEnabled(true);

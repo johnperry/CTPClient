@@ -29,6 +29,7 @@ public class DialogPanel extends JPanel {
 	private static final int fieldWidth = 30;
 	private Hashtable<String,JTextField> fields;
 	private String title = "";
+	private boolean sessionMode = false;
 
 	public DialogPanel(Document doc, Properties config) {
 		super();
@@ -37,6 +38,7 @@ public class DialogPanel extends JPanel {
 
 		Element root = doc.getDocumentElement();
 		title = root.getAttribute("title").trim();
+		sessionMode = root.getAttribute("mode").trim().toLowerCase().equals("session");
 		Node child = root.getFirstChild();
 		while (child != null) {
 			if (child instanceof Element) {
@@ -56,6 +58,14 @@ public class DialogPanel extends JPanel {
 
 	public String getTitle() {
 		return title;
+	}
+
+	public boolean studyMode() {
+		return !sessionMode;
+	}
+
+	public boolean sessionMode() {
+		return sessionMode;
 	}
 
 	public void setProperties(Properties config) {
