@@ -97,7 +97,7 @@ public class SenderThread extends Thread {
 			statusPane.setText( "Sending "+ (++fileNumber) + "/" + nFiles + " (" + file.getName() + ")");
 
 			try {
-				//Set what kind of object it is
+				//See what kind of object it is
 				FileObject fob = FileObject.getInstance(file);
 				if (fob instanceof DicomObject) {
 					DicomObject dob = (DicomObject) fob;
@@ -109,6 +109,7 @@ public class SenderThread extends Thread {
 						if (!dfEnabled || (dfScript == null) || dob.matches(dfScript)) {
 
 							//Get the PHI PatientID for the IDTable
+							String phiPatientName = dob.getPatientName();
 							String phiPatientID = dob.getPatientID();
 
 							//Anonymize the pixels and the rest of the dataset.
@@ -119,7 +120,7 @@ public class SenderThread extends Thread {
 							//If all went well, update the idTable and export
 							if (dob != null) {
 								String anonPatientID = dob.getPatientID();
-								idTable.put(phiPatientID, anonPatientID);
+								idTable.put(phiPatientName, phiPatientID, anonPatientID);
 								String status = "";
 
 								//Copy the file to the export directory, if so configured

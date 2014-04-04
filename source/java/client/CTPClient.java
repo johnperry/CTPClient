@@ -19,7 +19,6 @@ import org.rsna.ctp.stdstages.anonymizer.dicom.PixelScript;
 import org.rsna.ctp.stdstages.anonymizer.LookupTable;
 import org.rsna.ctp.stdstages.dicom.SimpleDicomStorageSCP;
 import org.rsna.server.HttpResponse;
-import org.rsna.ui.RowLayout;
 import org.rsna.util.BrowserUtil;
 import org.rsna.util.FileUtil;
 import org.rsna.util.HttpUtil;
@@ -304,6 +303,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 		if (source.equals(browseButton)) {
 			dir = getDirectory();
 			if (dir != null) {
+				setWaitCursor(true);
 				dp.clear();
 				dp.setDeleteOnSuccess(false);
 				studyList = new StudyList(dir, radioMode, anio);
@@ -311,11 +311,13 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 				studyList.deselectAll();
 				startButton.setEnabled(true);
 				sp.getVerticalScrollBar().setValue(0);
+				setWaitCursor(false);
 			}
 			else startButton.setEnabled(false);
 		}
 		else if (source.equals(scpButton)) {
 			if (scpDirectory != null) {
+				setWaitCursor(true);
 				dp.clear();
 				dp.setDeleteOnSuccess(true);
 				studyList = new StudyList(scpDirectory, radioMode, anio);
@@ -323,6 +325,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 				studyList.deselectAll();
 				startButton.setEnabled(true);
 				sp.getVerticalScrollBar().setValue(0);
+				setWaitCursor(false);
 			}
 		}
 		else if (source.equals(dialogButton)) {
@@ -354,6 +357,11 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 			this.requestFocus();
 		}
 	}
+
+    private void setWaitCursor(boolean on) {
+        if (on) setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        else setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+    }
 
 	private void showLog() {
 		String text = Log.getInstance().getText().trim();
@@ -429,12 +437,28 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 	public void transmissionComplete() {
 		sending = false;
+		final JFrame parent = this;
 		Runnable enable = new Runnable() {
 			public void run() {
 				scpButton.setEnabled(true);
 				browseButton.setEnabled(true);
 				dialogButton.setEnabled(true);
 				startButton.setEnabled(true);
+				int result = JOptionPane.showOptionDialog(
+					parent,
+					"The selected images have been processed\n\n"
+					+"If you want to process more images, click YES.\n"
+					+"If you want to exit the program, click NO.\n\n",
+					"Processing Complete",
+					JOptionPane.YES_NO_OPTION,
+					JOptionPane.QUESTION_MESSAGE,
+					null, //icon
+					null, //options
+					null); //initialValue
+				if (result == JOptionPane.NO_OPTION) {
+					WindowEvent wev = new WindowEvent(parent, WindowEvent.WINDOW_CLOSING);
+					Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(wev);
+				}
 			}
 		};
 		SwingUtilities.invokeLater(enable);

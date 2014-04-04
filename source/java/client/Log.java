@@ -29,11 +29,16 @@ public class Log {
 
 	public void save(Component parent) {
 		if (log.length() > 0) {
-			JFileChooser chooser = new JFileChooser();
+			File dir = new File(System.getProperty("user.home"));
+			dir = new File(dir, "Documents");
+			dir.mkdirs();
+			File file = new File(dir, "CTPClient.log");
+			JFileChooser chooser = new JFileChooser(dir);
+			chooser.setSelectedFile(file);
 			chooser.setDialogTitle("Select a file to save the error log");
 			if (chooser.showSaveDialog(parent) == JFileChooser.APPROVE_OPTION) {
 				StringBuffer sb = new StringBuffer();
-				File file = chooser.getSelectedFile();
+				file = chooser.getSelectedFile();
 				if (file != null) {
 					if (file.exists()) sb.append(FileUtil.getText(file));
 				}
