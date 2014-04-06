@@ -13,14 +13,13 @@ import javax.swing.*;
 
 public class StudyName extends JButton {
 
-	FileName fileName;
-
 	public StudyName(FileName fileName) {
-		super( fileName.getPatientName()
+		super();
+		String name = fileName.getPatientName()
 				+ " [" + fileName.getPatientID() + "] "
-				+ fileName.getDate()
-				+ " " + fileName.getModality() );
-		this.fileName = fileName;
+				+ fileName.getStudyDate()
+				+ " " + fileName.getModality();
+		setText(name);
 		setFont( new Font( "Monospaced", Font.BOLD, 16 ) );
 		setForeground( Color.blue );
 		setBorder(BorderFactory.createEmptyBorder());
@@ -31,4 +30,3 @@ public class StudyName extends JButton {
 	}
 
 }
-

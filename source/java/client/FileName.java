@@ -20,7 +20,7 @@ public class FileName implements Comparable<FileName> {
 	FileSize fileSize;
 	String patientName = "";
 	String patientID = "";
-	String siUID = "";
+	String studyInstanceUID = "";
 	String studyDate = "";
 	String modality = "";
 	int seriesNumberInt = 0;
@@ -43,7 +43,7 @@ public class FileName implements Comparable<FileName> {
 			isImage = dob.isImage();
 			patientName = fixNull(dob.getPatientName());
 			patientID = fixNull(dob.getPatientID());
-			siUID = fixNull(dob.getStudyInstanceUID());
+			studyInstanceUID = fixNull(dob.getStudyInstanceUID());
 			modality = fixNull(dob.getModality());
 			studyDate = fixDate(dob.getStudyDate());
 			String seriesNumber = fixNull(dob.getSeriesNumber());
@@ -78,7 +78,11 @@ public class FileName implements Comparable<FileName> {
 		return patientID;
 	}
 
-	public String getDate() {
+	public String getStudyInstanceUID() {
+		return studyInstanceUID;
+	}
+
+	public String getStudyDate() {
 		return studyDate;
 	}
 
@@ -104,7 +108,7 @@ public class FileName implements Comparable<FileName> {
 		int c;
 		if ( (c = this.patientID.compareTo(fn.patientID)) != 0 ) return c;
 		if ( (c = this.studyDate.compareTo(fn.studyDate)) != 0 ) return c;
-		if ( (c = this.siUID.compareTo(fn.siUID)) != 0 ) return c;
+		if ( (c = this.studyInstanceUID.compareTo(fn.studyInstanceUID)) != 0 ) return c;
 		if ( (c = this.seriesNumberInt - fn.seriesNumberInt) != 0 ) return c;
 		if ( (c = this.acquisitionNumberInt - fn.acquisitionNumberInt) != 0 ) return c;
 		if ( (c = this.instanceNumberInt - fn.instanceNumberInt) != 0 ) return c;
@@ -118,7 +122,7 @@ public class FileName implements Comparable<FileName> {
 
 	public boolean isSameStudy(FileName fn) {
 		if (fn == null) return false;
-		return isSamePatient(fn) && (this.siUID.equals(fn.siUID));
+		return isSamePatient(fn) && (this.studyInstanceUID.equals(fn.studyInstanceUID));
 	}
 
 	public boolean isDICOM() {

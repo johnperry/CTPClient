@@ -43,6 +43,7 @@ public class SenderThread extends Thread {
 	boolean dfEnabled;
 	boolean dpaEnabled;
 	boolean setBurnedInAnnotation = false;
+	boolean zip = false;
 	DicomStorageSCU scu = null;
 	IntegerTable integerTable = null;
 
@@ -61,6 +62,7 @@ public class SenderThread extends Thread {
 		this.dfEnabled = parent.getDFEnabled();
 		this.dpaEnabled = parent.getDPAEnabled();
 		this.setBurnedInAnnotation = parent.getSetBurnedInAnnotation();
+		this.zip = parent.getZip();
 		this.exportDirectory = parent.getExportDirectory();
 		this.renameFiles = parent.getRenameFiles();
 		this.parent = parent;
@@ -268,7 +270,8 @@ public class SenderThread extends Thread {
 		svros = conn.getOutputStream();
 
 		//Send the file to the server
-		FileUtil.streamFile(fileToExport, svros);
+		if (!zip) FileUtil.streamFile(fileToExport, svros);
+		else FileUtil.zipStreamFile(fileToExport, svros);
 
 		//Check the response code
 		int responseCode = conn.getResponseCode();

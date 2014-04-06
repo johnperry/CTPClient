@@ -14,16 +14,20 @@ import java.util.*;
 import javax.swing.*;
 import org.rsna.ui.RowLayout;
 
-public class Study implements ActionListener {
+public class Study implements ActionListener, Comparable<Study> {
 
 	LinkedList<FileName> list = null;
 	StudyCheckBox cb = null;
 	StudyName studyName = null;
+	String patientName = null;
+	String studyDate = null;
 
 	public Study(FileName fileName) {
 		list = new LinkedList<FileName>();
 		cb = new StudyCheckBox();
 		cb.addActionListener(this);
+		patientName = fileName.getPatientName();
+		studyDate = fileName.getStudyDate();
 		studyName = new StudyName(fileName);
 		studyName.addActionListener(this);
 		add(fileName);
@@ -52,8 +56,23 @@ public class Study implements ActionListener {
 		}
 	}
 
+	public int compareTo(Study study) {
+		if (study == null)  return 0;
+		int c;
+		if ( (c = this.patientName.compareTo(study.getPatientName())) != 0 ) return c;
+		return this.studyDate.compareTo(study.getStudyDate());
+ 	}
+
 	public StudyCheckBox getCheckBox() {
 		return cb;
+	}
+
+	public String getPatientName() {
+		return patientName;
+	}
+
+	public String getStudyDate() {
+		return studyDate;
 	}
 
 	public boolean isSelected() {
@@ -90,13 +109,11 @@ public class Study implements ActionListener {
 		return null;
 	}
 
-	public String getName() {
-		return studyName.getText();
-	}
-
 	public FileName[] getFileNames() {
 		FileName[] names = new FileName[list.size()];
-		return list.toArray(names);
+		names = list.toArray(names);
+		Arrays.sort(names);
+		return names;
 	}
 
 	public void display(DirectoryPanel dp) {
@@ -104,7 +121,7 @@ public class Study implements ActionListener {
 		dp.add(cb);
 		dp.add(studyName, RowLayout.span(4));
 		dp.add(RowLayout.crlf());
-		for (FileName fn : list) {
+		for (FileName fn : getFileNames()) {
 			fn.display(dp);
 		}
 	}

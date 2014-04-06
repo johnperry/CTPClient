@@ -59,6 +59,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
     boolean showDialogButton = true;
     boolean showBrowseButton = true;
 
+    boolean zip = false;
     boolean setBurnedInAnnotation = false;
 
     Properties config;
@@ -100,6 +101,9 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
     public CTPClient(String[] args) {
 		super();
+
+		try { UIManager.setLookAndFeel( UIManager.getSystemLookAndFeelClassName() ); }
+		catch (Exception ignore) { }
 
 		//Get the configuration from the args.
 		config = getConfiguration(args);
@@ -149,6 +153,9 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 		//Get the filter script
 		dfScript = getDFScriptObject();
+
+		//Get the zip parameter for HTTP export
+		zip = config.getProperty("zip", "no").trim().equals("yes");
 
 		//Set the enables
 		dfEnabled = config.getProperty("dfEnabled", "no").trim().equals("yes");
@@ -308,7 +315,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 				dp.setDeleteOnSuccess(false);
 				studyList = new StudyList(dir, radioMode, anio);
 				studyList.display(dp);
-				studyList.deselectAll();
+				studyList.selectFirstStudy();
 				startButton.setEnabled(true);
 				sp.getVerticalScrollBar().setValue(0);
 				setWaitCursor(false);
@@ -322,7 +329,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 				dp.setDeleteOnSuccess(true);
 				studyList = new StudyList(scpDirectory, radioMode, anio);
 				studyList.display(dp);
-				studyList.deselectAll();
+				studyList.selectFirstStudy();
 				startButton.setEnabled(true);
 				sp.getVerticalScrollBar().setValue(0);
 				setWaitCursor(false);
@@ -537,6 +544,10 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 	public boolean getSetBurnedInAnnotation() {
 		return setBurnedInAnnotation;
+	}
+
+	public boolean getZip() {
+		return zip;
 	}
 
 	public boolean getAcceptNonImageObjects() {

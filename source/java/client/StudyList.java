@@ -15,7 +15,7 @@ import javax.swing.*;
 
 public class StudyList implements ActionListener {
 
-	LinkedList<Study> list;
+	Hashtable<String,Study> table;
 	File directory = null;
 	boolean radioMode = false;
 	boolean anio = false;
@@ -27,69 +27,61 @@ public class StudyList implements ActionListener {
 		this.directory = directory;
 		this.radioMode = radioMode;
 		this.anio = acceptNonImageObjects;
-		list = new LinkedList<Study>();
-		listFiles(directory);
+		table = new Hashtable<String,Study>();
+		addFiles(directory);
 		StatusPane.getInstance().setText("Directory: "+directory);
-	}
-
-	public void add(Study study) {
-		list.add(study);
-		study.getCheckBox().addActionListener(this);
 	}
 
 	public void actionPerformed(ActionEvent event) {
 		StudyCheckBox cb = (StudyCheckBox)event.getSource();
 		Study study = cb.getStudy();
 		if ((study != null) && cb.isSelected() && radioMode) {
-			for (Study s : list) {
+			for (Study s : table.values()) {
 				if (!s.equals(study)) s.setSelected(false);
 			}
 		}
 	}
 
 	public void selectFirstStudy() {
-		if (list.size() > 0) {
+		if (table.size() > 0) {
 			deselectAll();
-			list.getFirst().setSelected(true);
+			getStudies()[0].setSelected(true);
 		}
 	}
 
 	public void deselectAll() {
-		for (Study study : list) {
+		for (Study study : table.values()) {
 			study.setSelected(false);
 		}
 	}
 
 	public Study[] getStudies() {
-		Study[] studies = new Study[list.size()];
-		return list.toArray(studies);
+		Study[] studies = new Study[table.size()];
+		studies = table.values().toArray(studies);
+		Arrays.sort(studies);
+		return studies;
 	}
 
-	private void listFiles(File dir) {
+	private void addFiles(File dir) {
 		File[] files = dir.listFiles(filesOnlyFilter);
-		if (files.length > 0) {
-			FileName[] fileNames = new FileName[files.length];
-			for (int i=0; i<files.length; i++) fileNames[i] = new FileName(files[i]);
-			Arrays.sort(fileNames);
-			Study study = null;
-			FileName last = null;
-			for (FileName fileName : fileNames) {
-				if (fileName.isDICOM() && (anio || fileName.isImage())) {
-					if ((last == null) || !fileName.isSameStudy(last)) {
-						study = new Study(fileName);
-						last = fileName;
-						add(study);
-					}
-					else study.add(fileName);
+		for (File file: files) {
+			FileName fileName = new FileName(file);
+			if (fileName.isDICOM() && (anio || fileName.isImage())) {
+				String siuid = fileName.getStudyInstanceUID();
+				Study study = table.get(siuid);
+				if (study == null) {
+					study = new Study(fileName);
+					table.put(siuid, study);
 				}
+				else study.add(fileName);
 			}
 		}
 		files = dir.listFiles(directoriesOnlyFilter);
-		for (File file : files) listFiles(file);
+		for (File file : files) addFiles(file);
 	}
 
 	public void display(DirectoryPanel dp) {
-		for (Study study : list) {
+		for (Study study : getStudies()) {
 			study.display(dp);
 		}
 	}
