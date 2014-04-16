@@ -71,6 +71,7 @@ public class StudyList implements ActionListener {
 				Study study = table.get(siuid);
 				if (study == null) {
 					study = new Study(fileName);
+					study.getCheckBox().addActionListener(this);
 					table.put(siuid, study);
 				}
 				else study.add(fileName);
