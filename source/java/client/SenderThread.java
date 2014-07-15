@@ -47,6 +47,8 @@ public class SenderThread extends Thread {
 	DicomStorageSCU scu = null;
 	IntegerTable integerTable = null;
 
+	static final int retryCount = 5;
+
     public SenderThread (CTPClient parent) {
 		super("SenderThread");
 		this.studyList = parent.getStudyList();
@@ -261,32 +263,48 @@ public class SenderThread extends Thread {
 		}
 	}
 
-	private boolean httpExport(File fileToExport) throws Exception {
-		HttpURLConnection conn;
-		OutputStream svros;
-		//Establish the connection
-		conn = HttpUtil.getConnection(new URL(httpURLString));
-		conn.connect();
-		svros = conn.getOutputStream();
+	private boolean httpExport(File fileToExport) {
+		Log log = Log.getInstance();
+		for (int k=0; k<retryCount; k++) {
+			String msg = "";
+			try {
+				HttpURLConnection conn;
+				OutputStream svros;
+				//Establish the connection
+				conn = HttpUtil.getConnection(new URL(httpURLString));
+				conn.connect();
+				svros = conn.getOutputStream();
 
-		//Send the file to the server
-		if (!zip) FileUtil.streamFile(fileToExport, svros);
-		else FileUtil.zipStreamFile(fileToExport, svros);
+				//Send the file to the server
+				if (!zip) FileUtil.streamFile(fileToExport, svros);
+				else FileUtil.zipStreamFile(fileToExport, svros);
 
-		//Check the response code
-		int responseCode = conn.getResponseCode();
-		if (responseCode != HttpResponse.ok) return false;
+				//Check the response code
+				int responseCode = conn.getResponseCode();
+				if (responseCode != HttpResponse.ok) return false;
 
-		//Check the response text.
-		//Note: this rather odd way of acquiring a success
-		//result is for backward compatibility with MIRC.
-		String result = FileUtil.getText( conn.getInputStream() );
-		return result.equals("OK");
+				//Check the response text.
+				//Note: this rather odd way of acquiring a success
+				//result is for backward compatibility with MIRC.
+				String result = FileUtil.getText( conn.getInputStream() );
+				if (result.equals("OK")) return true;
+			}
+			catch (Exception ex) { msg = ex.getMessage(); }
+			log.append("HttpExport: "+httpURLString+" [failed on try "+(k+1)+"]");
+			if (!msg.equals("")) log.append("..."+msg);
+			snooze();
+		}
+		return false;
 	}
 
 	private boolean dicomExport(DicomObject dob) {
-		Status status = scu.send(dob.getFile()); //Use File because the stream was not open.
-		return status.equals(Status.OK);
+		for (int k=0; k<retryCount; k++) {
+			Status status = scu.send(dob.getFile()); //Use File because the stream was not open.
+			if (status.equals(Status.OK)) return true;
+			Log.getInstance().append("DicomExport: [failed on try "+(k+1)+"]");
+			snooze();
+		}
+		return false;
 	}
 
 	private boolean directoryExport(DicomObject dob) {
@@ -308,5 +326,10 @@ public class SenderThread extends Thread {
 		File tempFile = new File(dir, name+".partial");
 		File savedFile = new File(dir, name+".dcm");
 		return dob.copyTo(tempFile) && tempFile.renameTo(savedFile);
+	}
+
+	private void snooze() {
+		try { Thread.sleep(1000); }
+		catch (Exception ex) { }
 	}
 }

@@ -10,6 +10,7 @@ package client;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.net.Authenticator;
 import java.net.HttpURLConnection;
 import java.util.*;
 import javax.swing.*;
@@ -19,6 +20,7 @@ import org.rsna.ctp.stdstages.anonymizer.dicom.PixelScript;
 import org.rsna.ctp.stdstages.anonymizer.LookupTable;
 import org.rsna.ctp.stdstages.dicom.SimpleDicomStorageSCP;
 import org.rsna.server.HttpResponse;
+import org.rsna.ui.GeneralAuthenticator;
 import org.rsna.util.BrowserUtil;
 import org.rsna.util.FileUtil;
 import org.rsna.util.HttpUtil;
@@ -104,6 +106,9 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 		try { UIManager.setLookAndFeel( UIManager.getSystemLookAndFeelClassName() ); }
 		catch (Exception ignore) { }
+
+		Authenticator authenticator = new GeneralAuthenticator(this);
+		Authenticator.setDefault(authenticator);
 
 		//Get the configuration from the args.
 		config = getConfiguration(args);
