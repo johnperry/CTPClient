@@ -103,6 +103,7 @@
 			alias="${alias}"
 			keystore="${keystore}"
 			storepass="${password}"
+			tsaurl="https://timestamp.geotrust.com/tsa"
 			preservelastmodified="true">
 			<path>
 				<fileset dir="${products}" includes="*.jar" />
