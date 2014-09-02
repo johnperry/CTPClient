@@ -579,13 +579,6 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 			File defProps = new File("config.default");
 			loadProperties(props, defProps);
 
-			//Fix the httpURL property for backward compatibility
-			String httpURL = props.getProperty("httpURL");
-			String url = props.getProperty("url");
-			if (((httpURL == null) || httpURL.equals("")) && (url != null)) {
-				props.setProperty("httpURL", url);
-			}
-
 			//Add in the args
 			for (String arg : args) {
 				if (arg.length() >= 2) {
@@ -597,6 +590,13 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 						props.setProperty(name, value);
 					}
 				}
+			}
+
+			//Fix the httpURL property for backward compatibility
+			String httpURL = props.getProperty("httpURL");
+			String url = props.getProperty("url");
+			if (((httpURL == null) || httpURL.equals("")) && (url != null)) {
+				props.setProperty("httpURL", url);
 			}
 			//System.out.println(props.toString());
 		}
