@@ -151,7 +151,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 		getDAScript();
 
 		//Get the LookupTable
-		 getLookupTable();
+		getLookupTable();
 
 		//Get the PixelScript
 		dpaPixelScript = getDPAPixelScriptObject();
@@ -667,8 +667,8 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 	private PixelScript getDPAPixelScriptObject() {
 		PixelScript pixelScript = null;
 		if (config.getProperty("dpaEnabled", "no").equals("yes")) {
-			String daLUTName = config.getProperty("dpaName", "DPA.script");
-			File dpaFile = getTextFile(daLUTName, "/DPA.script");
+			String dpaScriptName = config.getProperty("dpaScriptName", "DPA.script");
+			File dpaFile = getTextFile(dpaScriptName, "/DPA.script");
 			if (dpaFile != null) pixelScript = new PixelScript(dpaFile);
 			else Log.getInstance().append("Unable to obtain the DicomPixelAnonymizer script\n");
 		}
