@@ -46,6 +46,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
     FieldButton dialogButton = null;
     FieldButton helpButton = null;
     FieldButton startButton = null;
+    FieldButton showMemoryButton = null;
     FieldButton showLogButton = null;
     FieldButton instructionsButton = null;
     int instructionsWidth = 425;
@@ -266,6 +267,11 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 		//Make a footer bar to display status.
 		status = StatusPane.getInstance(" ", bgColor);
+		if (config.getProperty("showMemory", "no").equals("yes")) {
+			showMemoryButton = new FieldButton("Show Memory");
+			showMemoryButton.addActionListener(this);
+			status.addRightComponent(showMemoryButton);
+		}
 		showLogButton = new FieldButton("Show Log");
 		showLogButton.addActionListener(this);
 		status.addRightComponent(showLogButton);
@@ -360,6 +366,9 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 				BrowserUtil.openURL(helpURL);
 			}
 		}
+		else if (source.equals(showMemoryButton)) {
+			showMemory();
+		}
 		else if (source.equals(showLogButton)) {
 			showLog();
 		}
@@ -374,6 +383,27 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
         if (on) setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         else setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
     }
+
+	private void showMemory() {
+		Runtime runtime = Runtime.getRuntime();
+		long totalMemory = runtime.totalMemory();
+		long usedMemory = totalMemory - runtime.freeMemory();
+		long maxMemory = runtime.maxMemory();
+
+		StringBuffer sb = new StringBuffer();
+		Formatter formatter = new Formatter(sb);
+		sb.append( "Memory in use: " );
+		formatter.format("%,d bytes", usedMemory);
+		sb.append("\n");
+		sb.append( "JVM memory: "  );
+		formatter.format("%,d bytes", totalMemory);
+		sb.append( "\n" );
+		sb.append( "Max memory: "  );
+		formatter.format("%,d bytes", maxMemory);
+		sb.append( "\n" );
+
+		JOptionPane.showMessageDialog(this, sb.toString(), "Memory", JOptionPane.PLAIN_MESSAGE);
+	}
 
 	private void showLog() {
 		String text = Log.getInstance().getText().trim();
