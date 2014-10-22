@@ -686,7 +686,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 	private String getDFScriptObject() {
 		String filterScript = null;
 		if (config.getProperty("dfEnabled", "no").equals("yes")) {
-			String dfName = config.getProperty("dfName", "DF.script");
+			String dfName = config.getProperty("dfScriptName", "DF.script");
 			File dfFile = getTextFile(dfName, "/DF.script");
 			if (dfFile != null) filterScript = FileUtil.getText(dfFile);
 			else Log.getInstance().append("Unable to obtain the DicomFilter script\n");
