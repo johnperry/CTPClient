@@ -48,6 +48,7 @@ public class SenderThread extends Thread {
 	IntegerTable integerTable = null;
 
 	static final int retryCount = 5;
+	static final int readTimeout = 5000;
 
     public SenderThread (CTPClient parent) {
 		super("SenderThread");
@@ -272,6 +273,7 @@ public class SenderThread extends Thread {
 				OutputStream svros;
 				//Establish the connection
 				conn = HttpUtil.getConnection(new URL(httpURLString));
+				conn.setReadTimeout(readTimeout);
 				conn.connect();
 				svros = conn.getOutputStream();
 
@@ -286,7 +288,7 @@ public class SenderThread extends Thread {
 				//Check the response text.
 				//Note: this rather odd way of acquiring a success
 				//result is for backward compatibility with MIRC.
-				String result = FileUtil.getText( conn.getInputStream() );
+				String result = FileUtil.getTextOrException( conn.getInputStream(), FileUtil.utf8 );
 				if (result.equals("OK")) return true;
 			}
 			catch (Exception ex) { msg = ex.getMessage(); }

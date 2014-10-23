@@ -127,6 +127,11 @@
 		<delete dir="${zip}" failonerror="false" />
 	</target>
 
-	<target name="all" depends="clean, zip"/>
+	<target name="all" depends="clean, zip">
+		<tstamp>
+			<format property="end" pattern="HH:mm:ss"/>
+		</tstamp>
+		<echo message="Time now ${end}"/>
+	</target>
 
 </project>
