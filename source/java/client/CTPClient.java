@@ -488,7 +488,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 				startButton.setEnabled(true);
 				int result = JOptionPane.showOptionDialog(
 					parent,
-					"The selected images have been processed\n\n"
+					"The selected images have been processed.\n\n"
 					+"If you want to process more images, click YES.\n"
 					+"If you want to exit the program, click NO.\n\n",
 					"Processing Complete",

@@ -184,7 +184,7 @@ public class SenderThread extends Thread {
 		if (integerTable != null) integerTable.close();
 		String resultText = "Processsing complete: ";
 		resultText += fileNumber+" file"+plural(fileNumber)+" processed";
-		if (fileNumber > 0) resultText += "; "+successes+" file"+plural(fileNumber)+" successfully exported";
+		if (fileNumber > 0) resultText += "; "+successes+" file"+plural(successes)+" successfully exported";
 		statusPane.setText(resultText);
 		parent.transmissionComplete();
 	}
