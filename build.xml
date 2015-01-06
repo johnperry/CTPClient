@@ -60,6 +60,7 @@
 				<include name="log4j.jar"/>
 				<include name="util.jar"/>
 				<include name="jdbm.jar"/>
+				<include name="pixelmed_codec.jar"/>
 			</fileset>
 		</copy>
 	</target>
@@ -81,7 +82,7 @@
 			<manifest>
 				<attribute name="Main-Class" value="client.CTPClient"/>
 				<attribute name="Implementation-Version" value="${today} @ ${now}"/>
-				<attribute name="Class-Path" value="util.jar log4j.jar dcm4che.jar dcm4che-imageio-rle-2.0.25.jar CTP.jar jdbm.jar"/>
+				<attribute name="Class-Path" value="util.jar log4j.jar dcm4che.jar dcm4che-imageio-rle-2.0.25.jar CTP.jar jdbm.jar pixelmed_codec.jar"/>
 				<attribute name="Application-Name" value="CTP Client"/>
 				<attribute name="Permissions" value="all-permissions"/>
 				<attribute name="Codebase" value="*"/>

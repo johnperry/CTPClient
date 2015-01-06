@@ -49,6 +49,7 @@ public class SenderThread extends Thread {
 
 	static final int retryCount = 5;
 	static final int readTimeout = 5000;
+	static final String JPEGBaseline = "1.2.840.10008.1.2.4.50";
 
     public SenderThread (CTPClient parent) {
 		super("SenderThread");
@@ -215,7 +216,8 @@ public class SenderThread extends Thread {
 				if (signature != null) {
 					Regions regions = signature.regions;
 					if ((regions != null) && (regions.size() > 0)) {
-						if (dob.isEncapsulated()) DICOMDecompressor.decompress(temp, temp);
+						boolean isJPEGBaseline = dob.hasTransferSyntaxUID(JPEGBaseline);
+						if (dob.isEncapsulated() && !isJPEGBaseline) DICOMDecompressor.decompress(temp, temp);
 						AnonymizerStatus status = DICOMPixelAnonymizer.anonymize(temp, temp, regions, setBurnedInAnnotation, false);
 						if (status.isOK()) {
 							try { dob = new DicomObject(temp); }
