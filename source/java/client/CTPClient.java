@@ -104,6 +104,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
     public CTPClient(String[] args) {
 		super();
+		System.setProperty("http.keepAlive", "false");
 
 		try { UIManager.setLookAndFeel( UIManager.getSystemLookAndFeelClassName() ); }
 		catch (Exception ignore) { }
