@@ -285,12 +285,16 @@ public class SenderThread extends Thread {
 
 				//Check the response code
 				int responseCode = conn.getResponseCode();
-				if (responseCode != HttpResponse.ok) return false;
+				if (responseCode != HttpResponse.ok) {
+					conn.disconnect();
+					return false;
+				}
 
 				//Check the response text.
 				//Note: this rather odd way of acquiring a success
 				//result is for backward compatibility with MIRC.
-				String result = FileUtil.getTextOrException( conn.getInputStream(), FileUtil.utf8 );
+				String result = FileUtil.getTextOrException( conn.getInputStream(), FileUtil.utf8, false );
+				conn.disconnect();
 				if (result.equals("OK")) return true;
 			}
 			catch (Exception ex) { msg = ex.getMessage(); }
