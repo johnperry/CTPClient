@@ -98,7 +98,7 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 		Logger.getRootLogger().addAppender(
 				new ConsoleAppender(
 					new PatternLayout("%d{HH:mm:ss} %-5p [%c{1}] %m%n")));
-		Logger.getRootLogger().setLevel(Level.WARN);
+		Logger.getRootLogger().setLevel(Level.INFO);
         new CTPClient(args);
     }
 
