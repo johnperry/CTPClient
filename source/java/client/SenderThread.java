@@ -50,6 +50,7 @@ public class SenderThread extends Thread {
 	static final int retryCount = 5;
 	static final int readTimeout = 5000;
 	static final String JPEGBaseline = "1.2.840.10008.1.2.4.50";
+	static final long maxUnchunked = 20 * 1024 * 1024;
 
     public SenderThread (CTPClient parent) {
 		super("SenderThread");
@@ -276,6 +277,7 @@ public class SenderThread extends Thread {
 				//Establish the connection
 				conn = HttpUtil.getConnection(new URL(httpURLString));
 				conn.setReadTimeout(readTimeout);
+				if (fileToExport.length() > maxUnchunked) conn.setChunkedStreamingMode(0);
 				conn.connect();
 				svros = conn.getOutputStream();
 
