@@ -30,6 +30,13 @@ public class SenderThread extends Thread {
 	StudyList studyList;
 	String httpURLString;
 	String dicomURLString;
+	
+	String stowURLString;
+	String username = "";
+	String password = "";
+	boolean authenticate = false;
+	String authHeader = "";
+	
 	File exportDirectory = null;
 	boolean renameFiles = false;
 	DirectoryPanel dp;
@@ -48,7 +55,10 @@ public class SenderThread extends Thread {
 	IntegerTable integerTable = null;
 
 	static final int retryCount = 5;
-	static final int readTimeout = 5000;
+	static final int oneSecond = 1000;
+	static final int connectionTimeout = 20 * oneSecond;
+	static final int readTimeout = 5 * oneSecond;
+	
 	static final String JPEGBaseline = "1.2.840.10008.1.2.4.50";
 	static final long maxUnchunked = 20 * 1024 * 1024;
 
@@ -71,6 +81,14 @@ public class SenderThread extends Thread {
 		this.exportDirectory = parent.getExportDirectory();
 		this.renameFiles = parent.getRenameFiles();
 		this.parent = parent;
+	
+		this.stowURLString = parent.getSTOWURL();
+		this.username = parent.getSTOWUsername();
+		this.password = parent.getSTOWPassword();
+		this.authenticate = (username != null) && !username.equals("");
+		if (authenticate) {
+			this.authHeader = "Basic " + Base64.encodeToString((username + ":" + password).getBytes());
+		}
 	}
 
 	public void run() {
@@ -151,8 +169,15 @@ public class SenderThread extends Thread {
 									if (!dicomExportOK) status = append(status, "DICOM");
 								}
 
+								//Do the DICOM STOWRS export, if so configured
+								boolean stowExportOK = true;
+								if ((stowURLString != null) && !stowURLString.equals("")) {
+									stowExportOK =  stowExport(dob);
+									if (!stowExportOK) status = append(status, "STOW");
+								}
+
 								//Count the complete successes
-								boolean ok = fileExportOK && httpExportOK && dicomExportOK;
+								boolean ok = fileExportOK && httpExportOK && dicomExportOK && stowExportOK;
 								if (ok) {
 									successes++;
 									fn.setSelected(false);
@@ -316,7 +341,52 @@ public class SenderThread extends Thread {
 		}
 		return false;
 	}
+	
+	private boolean stowExport(DicomObject dob) {
+		Log log = Log.getInstance();
+		//Do not export zero-length files
+		File fileToExport = dob.getFile();
+		long fileLength = fileToExport.length();
+		if (fileLength == 0) return false;
+		
+		HttpURLConnection conn = null;
+		OutputStream svros = null;
+		try {
+			//Establish the connection
+			URL url = new URL(stowURLString);
+			conn = HttpUtil.getConnection(url);
+			conn.setReadTimeout(connectionTimeout);
+			conn.setConnectTimeout(readTimeout);
+			if (authenticate) conn.setRequestProperty("Authorization", authHeader);
 
+			//Send the file to the server
+			ClientHttpRequest req = new ClientHttpRequest(conn, "multipart/related; type=application/dicom;");
+			req.addFilePart(fileToExport, "application/dicom");
+			InputStream is = req.post();
+			String response = FileUtil.getText(is, "UTF-8");
+			conn.disconnect();
+
+			//Get the response code and log Unauthorized responses
+			int responseCode = conn.getResponseCode();
+			if (responseCode == HttpResponse.unauthorized) {
+				log.append("STOW: Credentials for "+username+" were not accepted by "+url);
+				conn.disconnect();
+				return false;
+			}
+			else if (responseCode == HttpResponse.forbidden) {
+				log.append("STOW: User "+username+" was not accepted by "+url);
+				conn.disconnect();
+				return false;
+			}
+			else if (responseCode == HttpResponse.ok) return true;
+			else return false;
+		}
+		catch (Exception e) {
+			log.append("STOW: export failed: " + e.getMessage());
+			return false;
+		}
+	}
+	
 	private boolean directoryExport(DicomObject dob) {
 		File dir = exportDirectory;
 		String name = dob.getSOPInstanceUID();

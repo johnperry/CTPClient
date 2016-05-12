@@ -93,12 +93,16 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
     StudyList studyList = null;
 
     String dicomURL = null;
+    String stowURL = null;
+    String stowUsername = null;
+    String stowPassword = null;
 
     public static void main(String[] args) {
 		Logger.getRootLogger().addAppender(
 				new ConsoleAppender(
 					new PatternLayout("%d{HH:mm:ss} %-5p [%c{1}] %m%n")));
-		Logger.getRootLogger().setLevel(Level.INFO);
+		Logger.getRootLogger().setLevel(Level.WARN);
+		Logger.getLogger("org.rsna").setLevel(Level.INFO);
         new CTPClient(args);
     }
 
@@ -128,6 +132,11 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 		//Get the DICOM export URL
 		dicomURL = config.getProperty("dicomURL", "");
+
+		//Get the DICOM STOWRS export parameters
+		stowURL = config.getProperty("stowURL", "");
+		stowUsername = config.getProperty("stowUsername", "");
+		stowPassword = config.getProperty("stowPassword", "");
 
 		//Set up the exportDirectory
 		String expDir = config.getProperty("exportDirectory");
@@ -513,6 +522,18 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 
 	public String getDicomURL() {
 		return dicomURL;
+	}
+
+	public String getSTOWURL() {
+		return stowURL;
+	}
+
+	public String getSTOWUsername() {
+		return stowUsername;
+	}
+
+	public String getSTOWPassword() {
+		return stowPassword;
 	}
 
 	public File getExportDirectory() {
