@@ -106,6 +106,7 @@
 			storepass="${password}"
 			tsaurl="https://timestamp.geotrust.com/tsa"
 			preservelastmodified="true">
+			<sysproperty key="https.protocols" value="TLSv1,TLSv1.1,TLSv1.2"/>
 			<path>
 				<fileset dir="${products}" includes="*.jar" />
 			</path>
