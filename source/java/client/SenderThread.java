@@ -87,7 +87,7 @@ public class SenderThread extends Thread {
 		this.password = parent.getSTOWPassword();
 		this.authenticate = (username != null) && !username.equals("");
 		if (authenticate) {
-			this.authHeader = "Basic " + Base64.encodeToString((username + ":" + password).getBytes());
+			this.authHeader = "Basic " + org.rsna.util.Base64.encodeToString((username + ":" + password).getBytes());
 		}
 	}
 

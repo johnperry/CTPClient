@@ -104,7 +104,7 @@
 			alias="${alias}"
 			keystore="${keystore}"
 			storepass="${password}"
-			tsaurl="https://timestamp.geotrust.com/tsa"
+			tsaurl="http://timestamp.entrust.net/TSS/JavaHttpTS"
 			preservelastmodified="true">
 			<sysproperty key="https.protocols" value="TLSv1,TLSv1.1,TLSv1.2"/>
 			<path>
@@ -113,6 +113,8 @@
 			<flattenmapper />
 		</signjar>
 	</target>
+
+<!-- Doesn't work: tsaurl="https://timestamp.geotrust.com/tsa" -->
 
 	<target name="zip" depends="sign">
 		<delete dir="${zip}" failonerror="false" />
