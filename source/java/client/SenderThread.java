@@ -37,6 +37,12 @@ public class SenderThread extends Thread {
 	boolean authenticate = false;
 	String authHeader = "";
 	
+	String xnatAuthURLString;
+	String xnatUsername = "";
+	String xnatPassword = "";
+	String xnatCookiename = "";
+	XNATSession xnatSession = null;
+	
 	File exportDirectory = null;
 	boolean renameFiles = false;
 	DirectoryPanel dp;
@@ -66,6 +72,10 @@ public class SenderThread extends Thread {
 		super("SenderThread");
 		this.studyList = parent.getStudyList();
 		this.httpURLString = parent.getHttpURL();
+		this.xnatAuthURLString = parent.getXNATAuthURL();
+		this.xnatUsername = parent.getXNATUsername();
+		this.xnatPassword = parent.getXNATPassword();
+		this.xnatCookiename = parent.getXNATCookiename();
 		this.dicomURLString = parent.getDicomURL();
 		this.dp = parent.getDirectoryPanel();
 		this.daScriptProps = parent.getDAScriptProps();
@@ -89,6 +99,8 @@ public class SenderThread extends Thread {
 		if (authenticate) {
 			this.authHeader = "Basic " + org.rsna.util.Base64.encodeToString((username + ":" + password).getBytes());
 		}
+		
+		xnatSession = new XNATSession(xnatAuthURLString, xnatUsername, xnatPassword, xnatCookiename);
 	}
 
 	public void run() {
@@ -119,7 +131,7 @@ public class SenderThread extends Thread {
 			File file = fn.getFile();
 			StatusText fileStatus = fn.getStatusText();
 
-			statusPane.setText( "Sending "+ (++fileNumber) + "/" + nFiles + " (" + file.getName() + ")");
+			statusPane.setText("Sending "+ (++fileNumber) + "/" + nFiles + " (" + file.getName() + ")");
 
 			try {
 				//See what kind of object it is
@@ -301,6 +313,7 @@ public class SenderThread extends Thread {
 				OutputStream svros;
 				//Establish the connection
 				conn = HttpUtil.getConnection(new URL(httpURLString));
+				xnatSession.setCookie(conn);
 				conn.setReadTimeout(readTimeout);
 				if (fileToExport.length() > maxUnchunked) conn.setChunkedStreamingMode(0);
 				conn.connect();
@@ -412,4 +425,76 @@ public class SenderThread extends Thread {
 		try { Thread.sleep(1000); }
 		catch (Exception ex) { }
 	}
+	
+	class XNATSession {
+		URL url = null;
+		String username;
+		String cookieName = null;
+		String cookieValue = null;
+		String credentials = null;
+		long lastTime = 0;
+		long timeout = 10 * 60 * 1000; //10 minutes
+		
+		public XNATSession(String urlString,
+						   String username,
+						   String password,
+						   String cookieName) {
+			urlString = (urlString != null) ? urlString.trim() : "";
+			if (!urlString.trim().equals("")) {
+				this.cookieName = (cookieName != null) ? cookieName.trim() : "";
+				if (cookieName.equals("")) cookieName = "JSESSIONID";
+				this.username = (username != null) ? username.trim() : "";
+				password = (password != null) ? password.trim() : ".";
+				credentials = "Basic " + Base64.encodeToString((this.username + ":" + password).getBytes());
+				try { this.url = new URL(urlString); }
+				catch (Exception notconfigured) { 
+					Log.getInstance().append("XNAT: faulty auth URL: "+urlString);
+				}
+			}
+		}
+		
+		public boolean isConfigured() {
+			return url != null;
+		}
+		
+		public void invalidate() {
+			lastTime = 0;
+		}
+		
+		public void setCookie(HttpURLConnection conn) {
+			if (url != null) {
+				long time = System.currentTimeMillis();
+				if ((time - lastTime) > timeout) cookieValue = getCookie();
+				if (cookieValue != null) {
+					conn.setRequestProperty("Cookie", cookieName+"="+cookieValue);
+					lastTime = time;
+				}
+			}
+		}
+		
+		private String getCookie() {
+			try {
+				HttpURLConnection conn = HttpUtil.getConnection(url);
+				conn.setRequestMethod("GET");
+				conn.setReadTimeout(connectionTimeout);
+				conn.setConnectTimeout(readTimeout);
+				conn.setRequestProperty("Authorization", credentials);
+				conn.connect();
+				int responseCode = conn.getResponseCode();
+				//Log.getInstance().append(name+": XNAT Session request response code = "+responseCode);
+				String response = null;
+				if (responseCode == HttpResponse.ok) {
+					response = FileUtil.getTextOrException( conn.getInputStream(), FileUtil.utf8, false ).trim();
+				}
+				conn.disconnect();
+				//Log.getInstance().append("XNAT Session response: "+response);
+				if ((response != null) && !response.contains("<")) return response;
+			}
+			catch (Exception unable) { 
+				Log.getInstance().append("XNAT: Credentials for "+username+" were not accepted by "+url);
+			}
+			return null;
+		}
+	}
+
 }

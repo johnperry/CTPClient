@@ -536,6 +536,24 @@ public class CTPClient extends JFrame implements ActionListener, ComponentListen
 		return stowPassword;
 	}
 
+	public String getXNATAuthURL() {
+		return config.getProperty("xnatAuthURL");
+	}
+
+	public String getXNATUsername() {
+		return config.getProperty("xnatUsername");
+	}
+
+	public String getXNATPassword() {
+		return config.getProperty("xnatPassword");
+	}
+
+	public String getXNATCookiename() {
+		return config.getProperty("xnatCookiename");
+	}
+
+
+
 	public File getExportDirectory() {
 		return exportDirectory;
 	}
